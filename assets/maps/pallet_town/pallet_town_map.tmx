@@ -130,5 +130,12 @@
     <property name="target_map" value="MAP_PALLET_TOWN_PROFESSOR_OAKS_LAB"/>
    </properties>
   </object>
+  <object id="4" x="0" y="0" width="384" height="16">
+   <properties>
+    <property name="target_map" value="MAP_ROUTE1"/>
+    <property name="target_spawn_x" value="192"/>
+    <property name="target_spawn_y" value="608"/>
+   </properties>
+  </object>
  </objectgroup>
 </map>

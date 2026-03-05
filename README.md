@@ -44,9 +44,11 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 
 Requires Python and Pillow:
 
-`python tools/import_firered_pallet.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher`
+`python tools/import_firered_pallet.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher --map-name PalletTown`
+
+You can import other maps by changing `--map-name` (and optionally `--map-slug`, `--layout-id`, `--spawn-tile-x`, `--spawn-tile-y`).
 
 This generates:
-- `assets/maps/pallet_town/pallet_town_map.tmx`
-- `assets/maps/pallet_town/pallet_town_map_preview.png`
-- `assets/tilesets/pallet_town/pallet_town_tileset.png`
+- `assets/maps/<map_slug>/<map_slug>_map.tmx`
+- `assets/maps/<map_slug>/<map_slug>_map_preview.png`
+- `assets/tilesets/<map_slug>/<map_slug>_tileset.png`

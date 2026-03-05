@@ -15,12 +15,55 @@ std::filesystem::path TextureManager::resolvePath(const std::string& path) const
         return input;
     }
 
+    const auto findInAncestors = [&input](const std::filesystem::path& start, const bool includeStart)
+        -> std::filesystem::path {
+        if (start.empty()) {
+            return {};
+        }
+
+        std::filesystem::path cursor = includeStart ? start : start.parent_path();
+        while (!cursor.empty()) {
+            const std::filesystem::path candidate = cursor / input;
+            if (std::filesystem::exists(candidate)) {
+                return candidate;
+            }
+
+            const std::filesystem::path parent = cursor.parent_path();
+            if (parent == cursor) {
+                break;
+            }
+            cursor = parent;
+        }
+
+        return {};
+    };
+
+    const std::filesystem::path currentDirectory = std::filesystem::current_path();
+    // Prefer source-tree assets when running from a build directory.
+    if (const std::filesystem::path fromCurrentAncestors = findInAncestors(currentDirectory, false);
+        !fromCurrentAncestors.empty()) {
+        return fromCurrentAncestors;
+    }
+    if (const std::filesystem::path fromCurrent = findInAncestors(currentDirectory, true);
+        !fromCurrent.empty()) {
+        return fromCurrent;
+    }
+
     const char* basePath = SDL_GetBasePath();
     std::filesystem::path executableDirectory;
     if (basePath && basePath[0] != '\0') {
         executableDirectory = std::filesystem::path(basePath);
     } else {
-        executableDirectory = std::filesystem::current_path();
+        executableDirectory = currentDirectory;
+    }
+
+    if (const std::filesystem::path fromExecutableAncestors = findInAncestors(executableDirectory, false);
+        !fromExecutableAncestors.empty()) {
+        return fromExecutableAncestors;
+    }
+    if (const std::filesystem::path fromExecutable = findInAncestors(executableDirectory, true);
+        !fromExecutable.empty()) {
+        return fromExecutable;
     }
 
     return executableDirectory / input;

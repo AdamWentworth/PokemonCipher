@@ -37,7 +37,17 @@ int main(int argc, char** argv) {
     palletTown.coverTilesetPath = "";
     mapRegistry.addMap(palletTown);
 
+    MapDefinition route1{};
+    route1.id = "route_1";
+    route1.mapPath = "assets/maps/route_1/route_1_map.tmx";
+    route1.baseTilesetPath = "assets/tilesets/route_1/route_1_tileset.png";
+    route1.coverTilesetPath = "";
+    mapRegistry.addMap(route1);
+
     mapRegistry.addAlias("map_pallet_town", "pallet_town");
+    mapRegistry.addAlias("route1", "route_1");
+    mapRegistry.addAlias("map_route1", "route_1");
+    mapRegistry.addAlias("map_route_1", "route_1");
 
     scenes.registerScene("overworld", [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight]() {
         return std::make_unique<OverworldScene>(

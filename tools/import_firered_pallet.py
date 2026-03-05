@@ -2,8 +2,10 @@ import argparse
 import json
 import math
 import os
+import re
 import struct
 from pathlib import Path
+from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 
 from PIL import Image
@@ -236,6 +238,212 @@ def read_layout(layouts_path: Path, layout_id: str) -> dict:
     raise ValueError(f"Layout '{layout_id}' not found in {layouts_path}")
 
 
+def normalize_slug(value: str) -> str:
+    chars: list[str] = []
+    previous_was_separator = False
+
+    for ch in value:
+        if ch.isalnum():
+            chars.append(ch.lower())
+            previous_was_separator = False
+        else:
+            if not previous_was_separator:
+                chars.append("_")
+                previous_was_separator = True
+
+    slug = "".join(chars).strip("_")
+    return slug or "map"
+
+
+def find_spawn_tile(
+    blocked_grid: list[bool],
+    width: int,
+    height: int,
+    preferred_x: int | None = None,
+    preferred_y: int | None = None,
+) -> tuple[int, int]:
+    if width <= 0 or height <= 0:
+        return 0, 0
+
+    start_x = preferred_x if preferred_x is not None else width // 2
+    start_y = preferred_y if preferred_y is not None else height // 2
+    start_x = max(0, min(width - 1, start_x))
+    start_y = max(0, min(height - 1, start_y))
+
+    best_x = start_x
+    best_y = start_y
+    best_distance = float("inf")
+
+    for y in range(height):
+        for x in range(width):
+            index = y * width + x
+            if blocked_grid[index]:
+                continue
+
+            dx = x - start_x
+            dy = y - start_y
+            distance = float((dx * dx) + (dy * dy))
+            if distance < best_distance:
+                best_distance = distance
+                best_x = x
+                best_y = y
+
+    return best_x, best_y
+
+
+def read_spawn_tile_from_tmx(tmx_path: Path, tile_size: int) -> tuple[int, int] | None:
+    if not tmx_path.exists() or tile_size <= 0:
+        return None
+
+    try:
+        root = ElementTree.fromstring(tmx_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    for object_group in root.findall("objectgroup"):
+        group_name = object_group.attrib.get("name", "")
+        if "Spawn" not in group_name and "Player" not in group_name:
+            continue
+
+        for object_node in object_group.findall("object"):
+            object_name = object_node.attrib.get("name", "").lower()
+            if object_name and object_name != "default":
+                continue
+
+            try:
+                spawn_x = int(float(object_node.attrib.get("x", "0"))) // tile_size
+                spawn_y = int(float(object_node.attrib.get("y", "0"))) // tile_size
+                return spawn_x, spawn_y
+            except ValueError:
+                continue
+
+    return None
+
+
+def read_tmx_metrics(tmx_path: Path) -> tuple[int, int, int, int] | None:
+    if not tmx_path.exists():
+        return None
+
+    try:
+        root = ElementTree.fromstring(tmx_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    try:
+        width = int(root.attrib.get("width", "0"))
+        height = int(root.attrib.get("height", "0"))
+        tile_width = int(root.attrib.get("tilewidth", "16"))
+        tile_height = int(root.attrib.get("tileheight", "16"))
+    except ValueError:
+        return None
+
+    if width <= 0 or height <= 0 or tile_width <= 0 or tile_height <= 0:
+        return None
+
+    return width, height, tile_width, tile_height
+
+
+def map_constant_to_slug(map_constant: str) -> str:
+    normalized = map_constant
+    if normalized.startswith("MAP_"):
+        normalized = normalized[4:]
+    return normalize_slug(normalized)
+
+
+def map_constant_slug_candidates(map_constant: str) -> list[str]:
+    raw = map_constant[4:] if map_constant.startswith("MAP_") else map_constant
+    candidates = [normalize_slug(raw)]
+
+    with_underscores = re.sub(r"([A-Za-z])([0-9])", r"\1_\2", raw)
+    with_underscores = re.sub(r"([0-9])([A-Za-z])", r"\1_\2", with_underscores)
+    candidates.append(normalize_slug(with_underscores))
+
+    deduped: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in deduped:
+            deduped.append(candidate)
+    return deduped
+
+
+def build_connection_warps(
+    map_connections: list[dict],
+    map_width: int,
+    map_height: int,
+    tile_size: int,
+    maps_dir: Path,
+) -> list[dict]:
+    warps: list[dict] = []
+    source_mid_x = map_width // 2
+    source_mid_y = map_height // 2
+
+    for connection in map_connections:
+        target_map = str(connection.get("map", ""))
+        direction = str(connection.get("direction", "")).lower()
+
+        try:
+            offset = int(connection.get("offset", 0))
+        except (TypeError, ValueError):
+            offset = 0
+
+        target_slug = ""
+        target_metrics = None
+        for slug_candidate in map_constant_slug_candidates(target_map):
+            candidate_tmx = maps_dir / slug_candidate / f"{slug_candidate}_map.tmx"
+            target_metrics = read_tmx_metrics(candidate_tmx)
+            if target_metrics is not None:
+                target_slug = slug_candidate
+                break
+
+        if target_metrics is None:
+            continue
+
+        target_width, target_height, target_tile_width, target_tile_height = target_metrics
+
+        if direction == "up":
+            x = 0
+            y = 0
+            width = map_width
+            height = 1
+            target_x_tile = max(1, min(target_width - 2, source_mid_x + offset))
+            target_y_tile = max(0, target_height - 2)
+        elif direction == "down":
+            x = 0
+            y = max(0, map_height - 1)
+            width = map_width
+            height = 1
+            target_x_tile = max(1, min(target_width - 2, source_mid_x + offset))
+            target_y_tile = 1 if target_height > 1 else 0
+        elif direction == "left":
+            x = 0
+            y = 0
+            width = 1
+            height = map_height
+            target_x_tile = max(0, target_width - 2)
+            target_y_tile = max(1, min(target_height - 2, source_mid_y + offset))
+        elif direction == "right":
+            x = max(0, map_width - 1)
+            y = 0
+            width = 1
+            height = map_height
+            target_x_tile = 1 if target_width > 1 else 0
+            target_y_tile = max(1, min(target_height - 2, source_mid_y + offset))
+        else:
+            continue
+
+        warp = {
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height,
+            "dest_map": target_map,
+            "target_spawn_x": target_x_tile * target_tile_width,
+            "target_spawn_y": target_y_tile * target_tile_height,
+        }
+        warps.append(warp)
+
+    return warps
+
+
 def read_map_grid(path: Path, width: int, height: int) -> list[int]:
     values = list(struct.unpack(f"<{path.stat().st_size // 2}H", path.read_bytes()))
     expected = width * height
@@ -297,6 +505,7 @@ def render_layer_from_atlas(
 
 def write_tmx(
     tmx_path: Path,
+    tileset_name: str,
     map_width: int,
     map_height: int,
     tile_size: int,
@@ -333,11 +542,21 @@ def write_tmx(
         dest_map = warp.get("dest_map", "")
         x = int(warp.get("x", 0)) * tile_size
         y = int(warp.get("y", 0)) * tile_size
+        width = int(warp.get("width", 1)) * tile_size
+        height = int(warp.get("height", 1)) * tile_size
+
+        target_spawn_x = warp.get("target_spawn_x")
+        target_spawn_y = warp.get("target_spawn_y")
+        properties = [f'    <property name="target_map" value="{escape(dest_map)}"/>']
+        if target_spawn_x is not None and target_spawn_y is not None:
+            properties.append(f'    <property name="target_spawn_x" value="{target_spawn_x}"/>')
+            properties.append(f'    <property name="target_spawn_y" value="{target_spawn_y}"/>')
+
         warp_objects.append(
             "\n".join([
-                f'  <object id="{i}" x="{x}" y="{y}" width="{tile_size}" height="{tile_size}">',
+                f'  <object id="{i}" x="{x}" y="{y}" width="{width}" height="{height}">',
                 "   <properties>",
-                f'    <property name="target_map" value="{escape(dest_map)}"/>',
+                *properties,
                 "   </properties>",
                 "  </object>",
             ])
@@ -350,7 +569,7 @@ def write_tmx(
             f"renderorder=\"right-down\" width=\"{map_width}\" height=\"{map_height}\" "
             f"tilewidth=\"{tile_size}\" tileheight=\"{tile_size}\" infinite=\"0\">"
         ),
-        f" <tileset firstgid=\"1\" name=\"pallet_town\" tilewidth=\"{tile_size}\" tileheight=\"{tile_size}\" tilecount=\"{atlas_tile_count}\" columns=\"{atlas_columns}\">",
+        f" <tileset firstgid=\"1\" name=\"{escape(tileset_name)}\" tilewidth=\"{tile_size}\" tileheight=\"{tile_size}\" tilecount=\"{atlas_tile_count}\" columns=\"{atlas_columns}\">",
         f"  <image source=\"{escape(tileset_image_rel_path)}\" width=\"{atlas_columns * tile_size}\" height=\"{math.ceil(atlas_tile_count / atlas_columns) * tile_size}\"/>",
         " </tileset>",
         f" <layer id=\"1\" name=\"Terrain Layer\" width=\"{map_width}\" height=\"{map_height}\">",
@@ -442,16 +661,31 @@ def write_red_animation_xml(path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import FireRed Pallet Town assets for PokemonCipher")
+    parser = argparse.ArgumentParser(description="Import a FireRed map into PokemonCipher asset format")
     parser.add_argument("--firered-root", type=Path, default=Path(r"C:\Code\pokefirered"))
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--map-name", type=str, default="PalletTown", help="FireRed map directory name under data/maps")
+    parser.add_argument("--map-slug", type=str, default=None, help="Output folder/file slug (defaults from map name)")
+    parser.add_argument("--layout-id", type=str, default=None, help="Optional layout id override")
+    parser.add_argument("--spawn-tile-x", type=int, default=None, help="Optional preferred spawn tile x")
+    parser.add_argument("--spawn-tile-y", type=int, default=None, help="Optional preferred spawn tile y")
     args = parser.parse_args()
 
     firered_root = args.firered_root
     project_root = args.project_root
+    map_name = args.map_name
+    map_dir = firered_root / "data" / "maps" / map_name
+    map_json_path = map_dir / "map.json"
+    if not map_json_path.exists():
+        raise ValueError(f"Map JSON not found: {map_json_path}")
+
+    map_json = json.loads(map_json_path.read_text(encoding="utf-8"))
+    layout_id = args.layout_id or map_json.get("layout")
+    if not layout_id:
+        raise ValueError(f"No layout id found for map '{map_name}'.")
 
     layouts_path = firered_root / "data" / "layouts" / "layouts.json"
-    layout = read_layout(layouts_path, "LAYOUT_PALLET_TOWN")
+    layout = read_layout(layouts_path, layout_id)
 
     map_width = int(layout["width"])
     map_height = int(layout["height"])
@@ -478,7 +712,10 @@ def main() -> None:
     primary_attributes = decode_metatile_attributes(primary_dir / "metatile_attributes.bin")
     secondary_attributes = decode_metatile_attributes(secondary_dir / "metatile_attributes.bin")
 
-    map_values = read_map_grid(firered_root / "data" / "layouts" / "PalletTown" / "map.bin", map_width, map_height)
+    blockdata_filepath = layout.get("blockdata_filepath")
+    if not blockdata_filepath:
+        raise ValueError(f"Layout '{layout_id}' has no blockdata filepath.")
+    map_values = read_map_grid(firered_root / blockdata_filepath, map_width, map_height)
 
     metatile_ids = [value & MAPGRID_METATILE_ID_MASK for value in map_values]
     ordered_metatile_ids, base_gid_by_metatile_id = build_organized_metatile_mapping(metatile_ids)
@@ -563,34 +800,60 @@ def main() -> None:
         if layer_type in (METATILE_LAYER_TYPE_NORMAL, METATILE_LAYER_TYPE_SPLIT):
             cover_layer_values[index] = cover_gid_by_metatile_id.get(metatile_id, 0)
 
+    map_slug = normalize_slug(args.map_slug or to_snake_case(map_json.get("name", map_name)))
+
     assets_dir = project_root / "assets"
     maps_dir = assets_dir / "maps"
     tilesets_dir = assets_dir / "tilesets"
     characters_dir = assets_dir / "characters"
     animations_dir = assets_dir / "animations"
-    map_slug = "pallet_town"
     map_output_dir = maps_dir / map_slug
     tileset_output_dir = tilesets_dir / map_slug
 
     map_output_dir.mkdir(parents=True, exist_ok=True)
     tileset_output_dir.mkdir(parents=True, exist_ok=True)
 
-    tileset_output = tileset_output_dir / "pallet_town_tileset.png"
+    tileset_output = tileset_output_dir / f"{map_slug}_tileset.png"
     organized_atlas.save(tileset_output)
 
-    map_json = json.loads((firered_root / "data" / "maps" / "PalletTown" / "map.json").read_text(encoding="utf-8"))
-    warp_events = map_json.get("warp_events", [])
+    warp_events = list(map_json.get("warp_events", []))
+    connection_warps = build_connection_warps(
+        map_json.get("connections", []),
+        map_width,
+        map_height,
+        tile_size,
+        maps_dir,
+    )
+    warp_events.extend(connection_warps)
 
     collision_rects = merge_collision_runs(blocked_tiles, map_width, map_height, tile_size)
 
-    spawn_x = 6 * tile_size
-    spawn_y = 9 * tile_size
+    tmx_output = map_output_dir / f"{map_slug}_map.tmx"
+
+    preferred_spawn_x = args.spawn_tile_x
+    preferred_spawn_y = args.spawn_tile_y
+    existing_spawn_tile = read_spawn_tile_from_tmx(tmx_output, tile_size)
+    if existing_spawn_tile is not None:
+        if preferred_spawn_x is None:
+            preferred_spawn_x = existing_spawn_tile[0]
+        if preferred_spawn_y is None:
+            preferred_spawn_y = existing_spawn_tile[1]
+
+    spawn_tile_x, spawn_tile_y = find_spawn_tile(
+        blocked_tiles,
+        map_width,
+        map_height,
+        preferred_spawn_x,
+        preferred_spawn_y,
+    )
+    spawn_x = spawn_tile_x * tile_size
+    spawn_y = spawn_tile_y * tile_size
     ground_layer_values = [base_gid_by_metatile_id[metatile_id] for metatile_id in metatile_ids]
-    tmx_output = map_output_dir / "pallet_town_map.tmx"
     tileset_image_rel_path = os.path.relpath(tileset_output, map_output_dir).replace("\\", "/")
 
     write_tmx(
         tmx_output,
+        map_slug,
         map_width,
         map_height,
         tile_size,
@@ -609,7 +872,7 @@ def main() -> None:
     map_cover_image = render_layer_from_atlas(organized_atlas, cover_layer_values, map_width, map_height, tile_size)
     map_composite_image = map_ground_image.copy()
     map_composite_image.alpha_composite(map_cover_image)
-    map_composite_output = map_output_dir / "pallet_town_map_preview.png"
+    map_composite_output = map_output_dir / f"{map_slug}_map_preview.png"
     map_composite_image.save(map_composite_output)
 
     colorize_object_sprite(
@@ -620,7 +883,7 @@ def main() -> None:
 
     write_red_animation_xml(animations_dir / "red_overworld.xml")
 
-    print("Imported FireRed Pallet Town assets:")
+    print(f"Imported FireRed map assets for {map_name}:")
     print(f"- {tmx_output}")
     print(f"- {tileset_output}")
     print(f"- {map_composite_output}")

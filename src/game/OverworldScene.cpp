@@ -700,7 +700,7 @@ void OverworldScene::createCameraEntity(const int viewportWidth, const int viewp
 
 void OverworldScene::createPlayerEntity(const Vector2D& spawnPoint) {
     if (!AssetManager::hasAnimation("player")) {
-        AssetManager::loadAnimation("player", "assets/animations/red_overworld.xml");
+        AssetManager::loadAnimation("player", "assets/animations/wes_overworld.xml");
     }
 
     Entity& player = world_.createEntity();
@@ -722,7 +722,7 @@ void OverworldScene::createPlayerEntity(const Vector2D& spawnPoint) {
     }
 
     SDL_FRect dst{transform.position.x, transform.position.y, 16.0f, 32.0f};
-    auto& sprite = player.addComponent<Sprite>(textureManager_.load("assets/characters/red_normal.png"), src, dst);
+    auto& sprite = player.addComponent<Sprite>(textureManager_.load("assets/characters/wes/overworld/wes_overworld.png"), src, dst);
     sprite.offset = Vector2D(0.0f, -16.0f);
     sprite.mirrorOnRightClip = true;
 

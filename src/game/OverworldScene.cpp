@@ -45,6 +45,16 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
 
     if (!debugConsoleOpen_ && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
         const SDL_Keycode key = event.key.key;
+        if (partyMenuOverlay_.isOpen()) {
+            const PartyMenuAction partyAction = partyMenuOverlay_.handleKey(key, gameState_.party());
+            if (partyAction == PartyMenuAction::Closed) {
+                startMenuOverlay_.open();
+                startMenuOverlay_.clearStatusText();
+                refreshInputState();
+            }
+            return;
+        }
+
         if (!startMenuOverlay_.isOpen() && !scriptRunner_.isRunning() && (key == SDLK_ESCAPE || key == SDLK_TAB)) {
             startMenuOverlay_.open();
             startMenuOverlay_.clearStatusText();
@@ -74,10 +84,11 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
                     return;
                 }
 
-                std::ostringstream stream;
-                stream << "Party count: " << party.size();
-                startMenuOverlay_.setStatusText(stream.str());
-                printConsole("Start menu: party view placeholder.");
+                startMenuOverlay_.close();
+                startMenuOverlay_.clearStatusText();
+                partyMenuOverlay_.open(party);
+                refreshInputState();
+                printConsole("Start menu: party menu opened.");
                 return;
             }
             case StartMenuAction::Bag:
@@ -231,6 +242,8 @@ void OverworldScene::render() {
 
     dialogueOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
     startMenuOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
+    partyMenuOverlay_.render(textureManager_, viewportWidth_, viewportHeight_, gameState_.party());
+    renderDevConsoleOverlay();
 }
 
 bool OverworldScene::warpTo(const std::string& mapId, const std::string& spawnId) {

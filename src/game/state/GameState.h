@@ -56,6 +56,10 @@ public:
         return party_;
     }
 
+    std::vector<PartyPokemon>& party() {
+        return party_;
+    }
+
     void setTextSpeedFast(const bool value) {
         textSpeedFast_ = value;
     }

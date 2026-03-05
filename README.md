@@ -64,3 +64,18 @@ This generates:
 - `assets/maps/<map_slug>/<map_slug>_map.tmx`
 - `assets/maps/<map_slug>/<map_slug>_map_preview.png`
 - `assets/tilesets/<map_slug>/<map_slug>_tileset.png`
+
+## Regenerate FireRed Party Menu Assets
+
+Requires Python and Pillow:
+
+`python tools/import_firered_party_menu.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher`
+
+This generates:
+- `assets/ui/party_menu/bg_full.png`
+- `assets/ui/party_menu/slot_main.png`
+- `assets/ui/party_menu/slot_wide.png`
+- `assets/ui/party_menu/slot_wide_empty.png`
+- `assets/ui/party_menu/cancel_button.png`
+- `assets/ui/party_menu/confirm_button.png`
+- `assets/ui/party_menu/pokeball_small.png`

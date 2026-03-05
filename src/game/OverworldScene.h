@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_events.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -27,6 +28,7 @@ public:
         GameState& gameState,
         const MapRegistry& mapRegistry,
         const std::string& initialMapId,
+        std::function<bool(const std::string&, const Vector2D&)> saveGameCallback,
         int viewportWidth,
         int viewportHeight
     );
@@ -70,6 +72,7 @@ private:
     bool scriptInputLocked_ = false;
     bool introScriptChecked_ = false;
     bool scriptAdvanceRequested_ = false;
+    std::function<bool(const std::string&, const Vector2D&)> saveGameCallback_;
     StartMenuOverlay startMenuOverlay_;
 
     Map map_;

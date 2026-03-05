@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_keycode.h>
@@ -15,11 +16,13 @@ OverworldScene::OverworldScene(
     GameState& gameState,
     const MapRegistry& mapRegistry,
     const std::string& initialMapId,
+    std::function<bool(const std::string&, const Vector2D&)> saveGameCallback,
     const int viewportWidth,
     const int viewportHeight
 ) : textureManager_(textureManager),
     gameState_(gameState),
     mapRegistry_(mapRegistry),
+    saveGameCallback_(std::move(saveGameCallback)),
     viewportWidth_(viewportWidth),
     viewportHeight_(viewportHeight),
     tilemapRenderer_(textureManager, nullptr, nullptr) {
@@ -73,8 +76,26 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
                 printConsole("Start menu: bag placeholder.");
                 return;
             case StartMenuAction::Save:
-                startMenuOverlay_.setStatusText("Save not implemented yet.");
-                printConsole("Start menu: save placeholder.");
+                if (!saveGameCallback_) {
+                    startMenuOverlay_.setStatusText("Save unavailable.");
+                    printConsole("Start menu: save unavailable.");
+                    return;
+                }
+
+                if (const Entity* player = world_.findFirstWith<PlayerTag>();
+                    player && player->hasComponent<Transform>()) {
+                    const Vector2D position = player->getComponent<Transform>().position;
+                    if (saveGameCallback_(currentMapId_, position)) {
+                        startMenuOverlay_.setStatusText("Game saved.");
+                        printConsole("Start menu: game saved.");
+                    } else {
+                        startMenuOverlay_.setStatusText("Save failed.");
+                        printConsole("Start menu: save failed.");
+                    }
+                } else {
+                    startMenuOverlay_.setStatusText("Save failed.");
+                    printConsole("Start menu: player not found for save.");
+                }
                 return;
             case StartMenuAction::Options:
                 startMenuOverlay_.setStatusText("Options not implemented yet.");

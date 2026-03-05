@@ -21,6 +21,7 @@ add_executable(PokemonCipher
   src/game/OverworldScene.cpp
   src/game/OverworldSceneMap.cpp
   src/game/OverworldSceneDev.cpp
+  src/game/TitleScene.cpp
   src/game/dev/OverworldDevConsole.cpp
   src/game/dev/OverworldDevConsoleParsing.cpp
   src/game/dev/OverworldDevConsoleInfoHandlers.cpp
@@ -28,6 +29,7 @@ add_executable(PokemonCipher
   src/game/dev/OverworldDevConsoleTravelHandlers.cpp
   src/game/dev/OverworldDevConsoleStateHandlers.cpp
   src/game/scripting/LuaOverworldScriptLoader.cpp
+  src/game/save/SaveGameStorage.cpp
   src/game/ui/DialogueOverlay.cpp
   src/game/ui/StartMenuOverlay.cpp
   src/game/world/DefaultMapRegistry.cpp

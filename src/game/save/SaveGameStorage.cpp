@@ -126,6 +126,20 @@ bool SaveGameStorage::loadSlot(const int slotIndex, SaveSlotData& dataOut) const
             continue;
         }
 
+        if (key == "wild_encounters_enabled") {
+            if (!parseBool(value, loaded.wildEncountersEnabled)) {
+                return false;
+            }
+            continue;
+        }
+
+        if (key == "wild_encounter_rate_percent") {
+            if (!parseInt(value, loaded.wildEncounterRatePercent)) {
+                return false;
+            }
+            continue;
+        }
+
         if (key.rfind("party_", 0) == 0) {
             std::istringstream parser(value);
             std::string speciesToken;
@@ -181,6 +195,8 @@ bool SaveGameStorage::writeSlot(const int slotIndex, const SaveSlotData& data) c
     file << "story_checkpoint=" << data.storyCheckpoint << "\n";
     file << "text_speed_fast=" << (data.textSpeedFast ? 1 : 0) << "\n";
     file << "battle_style_set=" << (data.battleStyleSet ? 1 : 0) << "\n";
+    file << "wild_encounters_enabled=" << (data.wildEncountersEnabled ? 1 : 0) << "\n";
+    file << "wild_encounter_rate_percent=" << data.wildEncounterRatePercent << "\n";
     for (std::size_t i = 0; i < data.party.size(); ++i) {
         const PartyPokemon& member = data.party[i];
         file << "party_" << i << "="

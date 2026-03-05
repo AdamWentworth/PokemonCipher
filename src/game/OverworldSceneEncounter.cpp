@@ -44,6 +44,17 @@ bool OverworldScene::triggerWildEncounter(const std::string& tableId) {
     gameState_.setVar("pending_wild_level", wildEncounter->level);
     gameState_.setVar("wild_encounter_count", gameState_.getVar("wild_encounter_count") + 1);
 
+    Vector2D playerPosition{};
+    if (const Entity* player = world_.findFirstWith<PlayerTag>();
+        player && player->hasComponent<Transform>()) {
+        playerPosition = player->getComponent<Transform>().position;
+    }
+
+    if (encounterCallback_) {
+        encounterCallback_(*wildEncounter, currentMapId_, playerPosition);
+        return true;
+    }
+
     std::ostringstream encounterText;
     encounterText << "A wild " << wildEncounter->speciesName << " Lv" << wildEncounter->level << " appeared!";
 

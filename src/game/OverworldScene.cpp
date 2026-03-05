@@ -17,12 +17,14 @@ OverworldScene::OverworldScene(
     const MapRegistry& mapRegistry,
     const std::string& initialMapId,
     std::function<bool(const std::string&, const Vector2D&)> saveGameCallback,
+    std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback,
     const int viewportWidth,
     const int viewportHeight
 ) : textureManager_(textureManager),
     gameState_(gameState),
     mapRegistry_(mapRegistry),
     saveGameCallback_(std::move(saveGameCallback)),
+    encounterCallback_(std::move(encounterCallback)),
     viewportWidth_(viewportWidth),
     viewportHeight_(viewportHeight),
     tilemapRenderer_(textureManager, nullptr, nullptr) {

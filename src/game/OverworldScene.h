@@ -30,6 +30,7 @@ public:
         const MapRegistry& mapRegistry,
         const std::string& initialMapId,
         std::function<bool(const std::string&, const Vector2D&)> saveGameCallback,
+        std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback,
         int viewportWidth,
         int viewportHeight
     );
@@ -84,6 +85,7 @@ private:
     int encounterTrackingTileX_ = 0;
     int encounterTrackingTileY_ = 0;
     std::function<bool(const std::string&, const Vector2D&)> saveGameCallback_;
+    std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback_;
     StartMenuOverlay startMenuOverlay_;
 
     Map map_;

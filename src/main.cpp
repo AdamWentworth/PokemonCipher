@@ -8,8 +8,10 @@
 #include "app/LaunchOptions.h"
 #include "engine/Game.h"
 #include "engine/utils/Vector2D.h"
+#include "game/BattleScene.h"
 #include "game/OverworldScene.h"
 #include "game/TitleScene.h"
+#include "game/encounters/WildEncounterService.h"
 #include "game/save/SaveGameStorage.h"
 #include "game/state/GameState.h"
 #include "game/world/DefaultMapRegistry.h"
@@ -22,7 +24,9 @@ enum class PendingAction {
     None,
     StartNewGame,
     ContinueGame,
-    StartDevJump
+    StartDevJump,
+    StartBattle,
+    ReturnFromBattle
 };
 
 struct OverworldStartConfig {
@@ -31,19 +35,34 @@ struct OverworldStartConfig {
     std::optional<Vector2D> pixelOverride = std::nullopt;
 };
 
+struct BattleSessionConfig {
+    WildEncounter encounter{};
+    std::string returnMapId = "pallet_town";
+    Vector2D returnPosition{};
+};
+
 void applyNewGameState(GameState& gameState) {
     gameState.setFlag("intro_complete", false);
     gameState.setFlag("starter_eevee_obtained", false);
+    gameState.setFlag("in_battle", false);
     gameState.setVar("story_checkpoint", 0);
+    gameState.setVar("wild_encounter_count", 0);
+    gameState.setTextSpeedFast(false);
+    gameState.setBattleStyleSet(false);
+    gameState.setWildEncountersEnabled(true);
+    gameState.setWildEncounterRatePercent(16);
     gameState.clearParty();
 }
 
 void applySaveDataToState(GameState& gameState, const SaveSlotData& saveData) {
     gameState.setFlag("intro_complete", saveData.introComplete);
     gameState.setFlag("starter_eevee_obtained", saveData.starterEeveeObtained);
+    gameState.setFlag("in_battle", false);
     gameState.setVar("story_checkpoint", saveData.storyCheckpoint);
     gameState.setTextSpeedFast(saveData.textSpeedFast);
     gameState.setBattleStyleSet(saveData.battleStyleSet);
+    gameState.setWildEncountersEnabled(saveData.wildEncountersEnabled);
+    gameState.setWildEncounterRatePercent(saveData.wildEncounterRatePercent);
     gameState.clearParty();
     for (const PartyPokemon& member : saveData.party) {
         gameState.addPartyPokemon(member.speciesId, member.level, member.isPartner);
@@ -82,6 +101,7 @@ int main(int argc, char** argv) {
     GameState gameState;
     SaveGameStorage saveStorage;
     OverworldStartConfig overworldStart{};
+    BattleSessionConfig battleSession{};
 
     overworldStart.mapId = bootOptions.mapId;
     overworldStart.spawnId = bootOptions.spawnId;
@@ -109,7 +129,9 @@ int main(int argc, char** argv) {
         );
     });
 
-    scenes.registerScene("overworld", [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight, &overworldStart, &saveStorage]() {
+    scenes.registerScene(
+        "overworld",
+        [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight, &overworldStart, &saveStorage, &pendingAction, &battleSession]() {
         auto scene = std::make_unique<OverworldScene>(
             textures,
             gameState,
@@ -125,8 +147,20 @@ int main(int argc, char** argv) {
                 saveData.storyCheckpoint = gameState.getVar("story_checkpoint");
                 saveData.textSpeedFast = gameState.isTextSpeedFast();
                 saveData.battleStyleSet = gameState.isBattleStyleSet();
+                saveData.wildEncountersEnabled = gameState.areWildEncountersEnabled();
+                saveData.wildEncounterRatePercent = gameState.wildEncounterRatePercent();
                 saveData.party = gameState.party();
                 return saveStorage.writeSlot(kPrimarySaveSlot, saveData);
+            },
+            [&pendingAction, &battleSession](
+                const WildEncounter& encounter,
+                const std::string& mapId,
+                const Vector2D& playerPosition
+            ) {
+                battleSession.encounter = encounter;
+                battleSession.returnMapId = mapId;
+                battleSession.returnPosition = playerPosition;
+                pendingAction = PendingAction::StartBattle;
             },
             logicalWidth,
             logicalHeight
@@ -141,6 +175,17 @@ int main(int argc, char** argv) {
         }
 
         return scene;
+    });
+
+    scenes.registerScene("battle", [&textures, &gameState, &pendingAction, &battleSession]() {
+        return std::make_unique<BattleScene>(
+            textures,
+            gameState,
+            battleSession.encounter,
+            [&pendingAction]() {
+                pendingAction = PendingAction::ReturnFromBattle;
+            }
+        );
     });
 
     if (bootOptions.mode == BootMode::Overworld) {
@@ -201,6 +246,17 @@ int main(int argc, char** argv) {
                 overworldStart.mapId = bootOptions.mapId;
                 overworldStart.spawnId = bootOptions.spawnId;
                 overworldStart.pixelOverride = std::nullopt;
+                if (!scenes.changeScene("overworld")) {
+                    return 1;
+                }
+            } else if (action == PendingAction::StartBattle) {
+                if (!scenes.changeScene("battle")) {
+                    return 1;
+                }
+            } else if (action == PendingAction::ReturnFromBattle) {
+                overworldStart.mapId = battleSession.returnMapId;
+                overworldStart.spawnId = "default";
+                overworldStart.pixelOverride = battleSession.returnPosition;
                 if (!scenes.changeScene("overworld")) {
                     return 1;
                 }

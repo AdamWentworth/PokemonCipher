@@ -23,6 +23,7 @@ add_executable(PokemonCipher
   src/game/OverworldSceneDev.cpp
   src/game/OverworldSceneInteraction.cpp
   src/game/OverworldSceneEncounter.cpp
+  src/game/BattleScene.cpp
   src/game/TitleScene.cpp
   src/game/dev/OverworldDevConsole.cpp
   src/game/dev/OverworldDevConsoleEncounterHandlers.cpp

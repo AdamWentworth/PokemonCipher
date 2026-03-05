@@ -14,6 +14,8 @@ struct SaveSlotData {
     int storyCheckpoint = 0;
     bool textSpeedFast = false;
     bool battleStyleSet = false;
+    bool wildEncountersEnabled = true;
+    int wildEncounterRatePercent = 16;
     std::vector<PartyPokemon> party;
 };
 

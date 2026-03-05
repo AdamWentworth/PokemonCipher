@@ -46,6 +46,8 @@ public:
 private:
     void createDevConsole();
     bool tryInteractWithNpc();
+    void checkEncounterZones(float dt);
+    void syncEncounterTrackingToPlayer();
     void registerDefaultScripts();
     void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
@@ -75,6 +77,10 @@ private:
     bool scriptInputLocked_ = false;
     bool introScriptChecked_ = false;
     bool scriptAdvanceRequested_ = false;
+    float encounterCooldownSeconds_ = 0.0f;
+    bool hasEncounterTrackingTile_ = false;
+    int encounterTrackingTileX_ = 0;
+    int encounterTrackingTileY_ = 0;
     std::function<bool(const std::string&, const Vector2D&)> saveGameCallback_;
     StartMenuOverlay startMenuOverlay_;
 

@@ -209,6 +209,7 @@ void OverworldScene::update(const float dt) {
     world_.update(dt);
     OverworldEntityFactory::resolvePlayerWallCollisions(world_);
     checkMapWarps(dt);
+    checkEncounterZones(dt);
     world_.updateCamera();
 }
 
@@ -274,6 +275,9 @@ bool OverworldScene::teleportPlayer(const Vector2D& pixelPosition) {
         gridMovement.bumpDirection = Vector2D(0.0f, 0.0f);
         gridMovement.applyWalkStartFrame = false;
     }
+
+    encounterCooldownSeconds_ = 0.15f;
+    syncEncounterTrackingToPlayer();
 
     return true;
 }

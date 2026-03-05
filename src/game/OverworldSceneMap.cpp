@@ -87,6 +87,8 @@ bool OverworldScene::loadMap(
     refreshInputState();
 
     warpCooldownSeconds_ = 0.2f;
+    encounterCooldownSeconds_ = 0.25f;
+    syncEncounterTrackingToPlayer();
     return true;
 }
 

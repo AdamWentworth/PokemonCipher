@@ -47,6 +47,6 @@ Requires Python and Pillow:
 `python tools/import_firered_pallet.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher`
 
 This generates:
-- `assets/maps/pallet_town/map.tmx`
-- `assets/maps/pallet_town/preview.png`
-- `assets/tilesets/frlg/general__pallet_town/metatiles_organized.png`
+- `assets/maps/pallet_town/pallet_town_map.tmx`
+- `assets/maps/pallet_town/pallet_town_map_preview.png`
+- `assets/tilesets/pallet_town/pallet_town_tileset.png`

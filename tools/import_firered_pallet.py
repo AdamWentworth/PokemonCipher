@@ -570,13 +570,12 @@ def main() -> None:
     animations_dir = assets_dir / "animations"
     map_slug = "pallet_town"
     map_output_dir = maps_dir / map_slug
-    tileset_key = f"{primary_name}__{secondary_name}"
-    tileset_output_dir = tilesets_dir / "frlg" / tileset_key
+    tileset_output_dir = tilesets_dir / map_slug
 
     map_output_dir.mkdir(parents=True, exist_ok=True)
     tileset_output_dir.mkdir(parents=True, exist_ok=True)
 
-    tileset_output = tileset_output_dir / "metatiles_organized.png"
+    tileset_output = tileset_output_dir / "pallet_town_tileset.png"
     organized_atlas.save(tileset_output)
 
     map_json = json.loads((firered_root / "data" / "maps" / "PalletTown" / "map.json").read_text(encoding="utf-8"))
@@ -587,7 +586,7 @@ def main() -> None:
     spawn_x = 6 * tile_size
     spawn_y = 9 * tile_size
     ground_layer_values = [base_gid_by_metatile_id[metatile_id] for metatile_id in metatile_ids]
-    tmx_output = map_output_dir / "map.tmx"
+    tmx_output = map_output_dir / "pallet_town_map.tmx"
     tileset_image_rel_path = os.path.relpath(tileset_output, map_output_dir).replace("\\", "/")
 
     write_tmx(
@@ -610,7 +609,7 @@ def main() -> None:
     map_cover_image = render_layer_from_atlas(organized_atlas, cover_layer_values, map_width, map_height, tile_size)
     map_composite_image = map_ground_image.copy()
     map_composite_image.alpha_composite(map_cover_image)
-    map_composite_output = map_output_dir / "preview.png"
+    map_composite_output = map_output_dir / "pallet_town_map_preview.png"
     map_composite_image.save(map_composite_output)
 
     colorize_object_sprite(

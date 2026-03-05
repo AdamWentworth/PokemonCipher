@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="24" height="20" tilewidth="16" tileheight="16" infinite="0">
  <tileset firstgid="1" name="pallet_town" tilewidth="16" tileheight="16" tilecount="133" columns="16">
-  <image source="../../tilesets/frlg/general__pallet_town/metatiles_organized.png" width="256" height="144"/>
+  <image source="../../tilesets/pallet_town/pallet_town_tileset.png" width="256" height="144"/>
  </tileset>
  <layer id="1" name="Terrain Layer" width="24" height="20">
   <data encoding="csv">

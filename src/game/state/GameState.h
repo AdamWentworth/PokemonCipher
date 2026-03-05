@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <string>
 #include <unordered_map>
@@ -71,6 +72,22 @@ public:
         return battleStyleSet_;
     }
 
+    void setWildEncountersEnabled(const bool value) {
+        wildEncountersEnabled_ = value;
+    }
+
+    bool areWildEncountersEnabled() const {
+        return wildEncountersEnabled_;
+    }
+
+    void setWildEncounterRatePercent(const int value) {
+        wildEncounterRatePercent_ = std::clamp(value, 0, 100);
+    }
+
+    int wildEncounterRatePercent() const {
+        return wildEncounterRatePercent_;
+    }
+
 private:
     static std::string normalize(const std::string& key) {
         std::string normalized;
@@ -86,4 +103,6 @@ private:
     std::vector<PartyPokemon> party_;
     bool textSpeedFast_ = false;
     bool battleStyleSet_ = false;
+    bool wildEncountersEnabled_ = true;
+    int wildEncounterRatePercent_ = 16;
 };

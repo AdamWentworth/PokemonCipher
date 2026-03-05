@@ -198,6 +198,92 @@ bool handleStateCommand(
         return true;
     }
 
+    if (command == "setencounters") {
+        if (!dependencies.print) {
+            return true;
+        }
+
+        if (tokens.size() != 2) {
+            dependencies.print("Usage: setencounters <on|off>");
+            return true;
+        }
+
+        if (!dependencies.gameState) {
+            dependencies.print("Game state unavailable.");
+            return true;
+        }
+
+        bool enabled = false;
+        if (!OverworldDevConsoleParsing::parseBoolToken(tokens[1], enabled)) {
+            dependencies.print("setencounters expects on|off|true|false|1|0.");
+            return true;
+        }
+
+        dependencies.gameState->setWildEncountersEnabled(enabled);
+        dependencies.print(enabled ? "Wild encounters enabled." : "Wild encounters disabled.");
+        return true;
+    }
+
+    if (command == "getencounters") {
+        if (!dependencies.print) {
+            return true;
+        }
+
+        if (!dependencies.gameState) {
+            dependencies.print("Game state unavailable.");
+            return true;
+        }
+
+        dependencies.print(dependencies.gameState->areWildEncountersEnabled()
+            ? "Wild encounters: ON"
+            : "Wild encounters: OFF");
+        return true;
+    }
+
+    if (command == "setencounterrate") {
+        if (!dependencies.print) {
+            return true;
+        }
+
+        if (tokens.size() != 2) {
+            dependencies.print("Usage: setencounterrate <0-100>");
+            return true;
+        }
+
+        if (!dependencies.gameState) {
+            dependencies.print("Game state unavailable.");
+            return true;
+        }
+
+        int rate = 0;
+        if (!OverworldDevConsoleParsing::parseIntToken(tokens[1], rate)) {
+            dependencies.print("setencounterrate expects an integer.");
+            return true;
+        }
+
+        dependencies.gameState->setWildEncounterRatePercent(rate);
+        std::ostringstream stream;
+        stream << "Wild encounter rate set to " << dependencies.gameState->wildEncounterRatePercent() << "%.";
+        dependencies.print(stream.str());
+        return true;
+    }
+
+    if (command == "getencounterrate") {
+        if (!dependencies.print) {
+            return true;
+        }
+
+        if (!dependencies.gameState) {
+            dependencies.print("Game state unavailable.");
+            return true;
+        }
+
+        std::ostringstream stream;
+        stream << "Wild encounter rate: " << dependencies.gameState->wildEncounterRatePercent() << "%";
+        dependencies.print(stream.str());
+        return true;
+    }
+
     return false;
 }
 } // namespace OverworldDevConsoleHandlers

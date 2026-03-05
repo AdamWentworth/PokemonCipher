@@ -11,7 +11,6 @@
 #include "game/events/OverworldScript.h"
 
 namespace {
-constexpr float kEncounterChance = 0.16f;
 constexpr float kEncounterCooldownOnTriggerSeconds = 0.25f;
 constexpr float kEncounterCooldownOnBlockedSeconds = 0.06f;
 
@@ -84,6 +83,10 @@ void OverworldScene::checkEncounterZones(const float dt) {
         return;
     }
 
+    if (!gameState_.areWildEncountersEnabled()) {
+        return;
+    }
+
     const Entity* player = world_.findFirstWith<PlayerTag>();
     if (!player ||
         !player->hasComponent<Transform>() ||
@@ -117,8 +120,14 @@ void OverworldScene::checkEncounterZones(const float dt) {
         return;
     }
 
+    const float encounterChance = static_cast<float>(gameState_.wildEncounterRatePercent()) / 100.0f;
+    if (encounterChance <= 0.0f) {
+        encounterCooldownSeconds_ = kEncounterCooldownOnBlockedSeconds;
+        return;
+    }
+
     std::uniform_real_distribution<float> rollDistribution(0.0f, 1.0f);
-    if (rollDistribution(encounterRng()) > kEncounterChance) {
+    if (rollDistribution(encounterRng()) > encounterChance) {
         encounterCooldownSeconds_ = kEncounterCooldownOnBlockedSeconds;
         return;
     }

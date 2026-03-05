@@ -22,6 +22,13 @@ public:
     void render() override;
 
 private:
+    enum class Action {
+        Attack = 0,
+        Dodge = 1,
+        Block = 2,
+        Run = 3
+    };
+
     enum class Phase {
         CommandSelect,
         Result
@@ -31,7 +38,7 @@ private:
     void confirmSelection();
     const char* actionLabel(int index) const;
 
-    static constexpr int kActionCount = 2;
+    static constexpr int kActionCount = 4;
 
     TextureManager& textureManager_;
     GameState& gameState_;

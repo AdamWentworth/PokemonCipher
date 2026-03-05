@@ -75,9 +75,9 @@ void BattleScene::render() {
 
     SDL_FRect commandBox{};
     commandBox.x = 8.0f;
-    commandBox.y = 110.0f;
+    commandBox.y = 96.0f;
     commandBox.w = 224.0f;
-    commandBox.h = 42.0f;
+    commandBox.h = 56.0f;
 
     SDL_SetRenderDrawColor(renderer, 20, 20, 24, 232);
     SDL_RenderFillRect(renderer, &commandBox);
@@ -86,7 +86,7 @@ void BattleScene::render() {
 
     if (phase_ == Phase::CommandSelect) {
         for (int i = 0; i < kActionCount; ++i) {
-            const float lineY = commandBox.y + 8.0f + (12.0f * static_cast<float>(i));
+            const float lineY = commandBox.y + 6.0f + (11.0f * static_cast<float>(i));
             if (i == selectedAction_) {
                 SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
                 SDL_RenderDebugText(renderer, commandBox.x + 8.0f, lineY, ">");
@@ -116,8 +116,20 @@ void BattleScene::confirmSelection() {
         return;
     }
 
-    if (selectedAction_ == 0) {
+    if (selectedAction_ == static_cast<int>(Action::Attack)) {
         resultText_ = "You defeated the wild foe.";
+        phase_ = Phase::Result;
+        return;
+    }
+
+    if (selectedAction_ == static_cast<int>(Action::Dodge)) {
+        resultText_ = "You dodged and found an opening.";
+        phase_ = Phase::Result;
+        return;
+    }
+
+    if (selectedAction_ == static_cast<int>(Action::Block)) {
+        resultText_ = "You blocked and braced for impact.";
         phase_ = Phase::Result;
         return;
     }
@@ -128,9 +140,13 @@ void BattleScene::confirmSelection() {
 
 const char* BattleScene::actionLabel(const int index) const {
     switch (index) {
-    case 0:
-        return "FIGHT (placeholder)";
-    case 1:
+    case static_cast<int>(Action::Attack):
+        return "ATTACK";
+    case static_cast<int>(Action::Dodge):
+        return "DODGE";
+    case static_cast<int>(Action::Block):
+        return "BLOCK";
+    case static_cast<int>(Action::Run):
         return "RUN";
     default:
         return "";

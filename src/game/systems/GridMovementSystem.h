@@ -13,6 +13,10 @@
 
 class GridMovementSystem {
 public:
+    void setInputEnabled(const bool enabled) {
+        inputEnabled_ = enabled;
+    }
+
     void setWorldBounds(const float worldWidth, const float worldHeight) {
         worldWidth_ = worldWidth;
         worldHeight_ = worldHeight;
@@ -22,8 +26,12 @@ public:
         constexpr float kBlockedBumpDuration = 0.12f;
         constexpr float kBlockedBumpAnimationMultiplier = 2.0f;
 
-        const bool* keyboardState = SDL_GetKeyboardState(nullptr);
-        if (!keyboardState) {
+        const bool* keyboardState = nullptr;
+        if (inputEnabled_) {
+            keyboardState = SDL_GetKeyboardState(nullptr);
+        }
+
+        if (inputEnabled_ && !keyboardState) {
             return;
         }
 
@@ -61,7 +69,9 @@ public:
                 continue;
             }
 
-            const Vector2D requestedDirection = readRequestedDirection(keyboardState);
+            const Vector2D requestedDirection = inputEnabled_
+                ? readRequestedDirection(keyboardState)
+                : Vector2D(0.0f, 0.0f);
             if (requestedDirection == Vector2D(0.0f, 0.0f)) {
                 if (gridMovement.bumpTimeRemaining > 0.0f) {
                     gridMovement.bumpTimeRemaining = std::max(0.0f, gridMovement.bumpTimeRemaining - dt);
@@ -112,6 +122,7 @@ public:
     }
 
 private:
+    bool inputEnabled_ = true;
     float worldWidth_ = 0.0f;
     float worldHeight_ = 0.0f;
 

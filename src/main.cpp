@@ -4,6 +4,7 @@
 
 #include "engine/Game.h"
 #include "game/OverworldScene.h"
+#include "game/state/GameState.h"
 #include "game/world/MapRegistry.h"
 
 int main(int argc, char** argv) {
@@ -26,6 +27,7 @@ int main(int argc, char** argv) {
 
     auto& scenes = game.sceneManager();
     auto& textures = game.textureManager();
+    GameState gameState;
     MapRegistry mapRegistry;
 
     MapDefinition palletTown{};
@@ -37,9 +39,10 @@ int main(int argc, char** argv) {
 
     mapRegistry.addAlias("map_pallet_town", "pallet_town");
 
-    scenes.registerScene("overworld", [&textures, &mapRegistry, logicalWidth, logicalHeight]() {
+    scenes.registerScene("overworld", [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight]() {
         return std::make_unique<OverworldScene>(
             textures,
+            gameState,
             mapRegistry,
             "pallet_town",
             logicalWidth,

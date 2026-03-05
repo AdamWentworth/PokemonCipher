@@ -14,6 +14,16 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 ## Controls
 
 - `WASD` or arrow keys to move
+- <code>`</code> to toggle developer console
+
+## Developer Console (for testing)
+
+- `help` to list commands
+- `maps` / `map` / `spawns` / `pos` for quick map inspection
+- `warp <mapId> [spawnId]` to jump maps
+- `warptile <mapId> <tx> <ty>` and `warpxy <mapId> <x> <y>` for coordinate warps
+- `goto <tx> <ty>` and `teleport <x> <y>` to reposition on current map
+- `setflag/getflag` and `setvar/getvar` for script/game-state testing
 
 ## Build
 

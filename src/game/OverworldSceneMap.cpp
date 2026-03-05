@@ -80,6 +80,7 @@ bool OverworldScene::loadMap(
 
     OverworldEntityFactory::createStaticCollisionEntities(world_, map_);
     OverworldEntityFactory::createCameraEntity(world_, map_, viewportWidth_, viewportHeight_);
+    OverworldEntityFactory::createNpcEntities(world_, map_, textureManager_);
 
     const Vector2D spawnPoint = spawnOverride.has_value() ? *spawnOverride : map_.getSpawnPoint(spawnId);
     OverworldEntityFactory::createPlayerEntity(world_, map_, spawnPoint, textureManager_);

@@ -7,6 +7,7 @@
 namespace OverworldEntityFactory {
 void createStaticCollisionEntities(World& world, const Map& map);
 void createCameraEntity(World& world, const Map& map, int viewportWidth, int viewportHeight);
+void createNpcEntities(World& world, const Map& map, TextureManager& textureManager);
 void createPlayerEntity(World& world, const Map& map, const Vector2D& spawnPoint, TextureManager& textureManager);
 void resolvePlayerWallCollisions(World& world);
 } // namespace OverworldEntityFactory

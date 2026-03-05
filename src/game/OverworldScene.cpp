@@ -50,6 +50,13 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
             return;
         }
 
+        if (!startMenuOverlay_.isOpen() && !scriptRunner_.isRunning() &&
+            (key == SDLK_RETURN || key == SDLK_KP_ENTER || key == SDLK_Z || key == SDLK_SPACE)) {
+            if (tryInteractWithNpc()) {
+                return;
+            }
+        }
+
         if (startMenuOverlay_.isOpen()) {
             const StartMenuAction action = startMenuOverlay_.handleKey(key);
             switch (action) {

@@ -138,4 +138,13 @@
    </properties>
   </object>
  </objectgroup>
+ <objectgroup id="6" name="NPC Layer">
+  <object id="1" name="guide" x="176" y="240" width="16" height="16">
+   <properties>
+    <property name="speaker" value="Guide"/>
+    <property name="dialogue" value="Press Z to talk, ESC for START, and ` for dev console."/>
+    <property name="facing" value="down"/>
+   </properties>
+  </object>
+ </objectgroup>
 </map>

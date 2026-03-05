@@ -4,6 +4,7 @@
 #include <cctype>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include <tinyxml2.h>
 
@@ -89,6 +90,7 @@ bool Map::load(const char* path) {
     blockingRects.clear();
     warpPoints.clear();
     encounterZones.clear();
+    npcSpawns.clear();
     spawnPoints.clear();
     bool foundSpawn = false;
 
@@ -101,13 +103,21 @@ bool Map::load(const char* path) {
             continue;
         }
 
-        const std::string groupName(layerName);
-        const bool isCollisionLayer = groupName.find("Collision") != std::string::npos;
-        const bool isSpawnLayer = groupName.find("Spawn") != std::string::npos || groupName.find("Player") != std::string::npos;
-        const bool isWarpLayer = groupName.find("Warp") != std::string::npos;
+        std::string groupName = layerName;
+        std::transform(groupName.begin(), groupName.end(), groupName.begin(), [](const unsigned char ch) {
+            return static_cast<char>(std::tolower(ch));
+        });
+
+        const bool isCollisionLayer = groupName.find("collision") != std::string::npos;
+        const bool isSpawnLayer = groupName.find("spawn") != std::string::npos || groupName.find("player") != std::string::npos;
+        const bool isWarpLayer = groupName.find("warp") != std::string::npos;
         const bool isEncounterLayer =
-            groupName.find("Encounter") != std::string::npos ||
-            groupName.find("Grass") != std::string::npos;
+            groupName.find("encounter") != std::string::npos ||
+            groupName.find("grass") != std::string::npos;
+        const bool isNpcLayer =
+            groupName.find("npc") != std::string::npos ||
+            groupName.find("character") != std::string::npos ||
+            groupName.find("object event") != std::string::npos;
 
         for (auto* object = objectGroup->FirstChildElement("object");
              object != nullptr;
@@ -215,6 +225,31 @@ bool Map::load(const char* path) {
                     zone.tableId = getStringProperty("table");
                 }
                 encounterZones.push_back(zone);
+            }
+
+            if (isNpcLayer) {
+                NpcSpawn npc{};
+                npc.area = getRectFromObject();
+                npc.scriptId = getStringProperty("script_id");
+                if (npc.scriptId.empty()) {
+                    npc.scriptId = getStringProperty("script");
+                }
+                npc.speaker = getStringProperty("speaker");
+                npc.dialogue = getStringProperty("dialogue");
+                if (npc.dialogue.empty()) {
+                    npc.dialogue = getStringProperty("text");
+                }
+                npc.facing = getStringProperty("facing");
+                npc.spritePath = getStringProperty("sprite");
+                npc.animationPath = getStringProperty("animation");
+
+                if (const char* name = object->Attribute("name"); name && name[0] != '\0') {
+                    npc.id = name;
+                } else {
+                    npc.id = std::to_string(object->IntAttribute("id", 0));
+                }
+
+                npcSpawns.push_back(std::move(npc));
             }
         }
     }

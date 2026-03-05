@@ -194,7 +194,7 @@ private:
             }
 
             const auto& collider = entity->getComponent<Collider>();
-            if (collider.tag != "wall") {
+            if (collider.tag != "wall" && collider.tag != "npc") {
                 continue;
             }
 

@@ -45,11 +45,14 @@ public:
 
 private:
     void createDevConsole();
+    bool tryInteractWithNpc();
     void registerDefaultScripts();
     void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
     void setDebugConsoleOpen(bool isOpen);
     void printConsole(const std::string& message) const;
+    Vector2D playerFacingDirection() const;
+    bool startTransientScript(OverworldScript script);
     bool consumeScriptAdvanceRequested();
 
     bool loadMap(
@@ -81,6 +84,7 @@ private:
     World world_;
     GridMovementSystem gridMovementSystem_;
     std::unique_ptr<OverworldDevConsole> devConsole_;
+    OverworldScript transientScript_;
     std::unordered_map<std::string, OverworldScript> scripts_;
     OverworldScriptRunner scriptRunner_;
 };

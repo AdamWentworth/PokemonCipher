@@ -60,4 +60,12 @@ struct Camera {
     float worldHeight = 0.0f;
 };
 
+struct NpcInteraction {
+    std::string id;
+    std::string scriptId;
+    std::string speaker;
+    std::string dialogue;
+};
+
 struct PlayerTag {};
+struct NpcTag {};

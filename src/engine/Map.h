@@ -19,6 +19,17 @@ struct EncounterZone {
     std::string tableId;
 };
 
+struct NpcSpawn {
+    SDL_FRect area{};
+    std::string id;
+    std::string scriptId;
+    std::string speaker;
+    std::string dialogue;
+    std::string facing;
+    std::string spritePath;
+    std::string animationPath;
+};
+
 class Map {
 public:
     bool load(const char* path);
@@ -34,6 +45,7 @@ public:
     std::vector<SDL_FRect> blockingRects;
     std::vector<WarpPoint> warpPoints;
     std::vector<EncounterZone> encounterZones;
+    std::vector<NpcSpawn> npcSpawns;
     std::unordered_map<std::string, Vector2D> spawnPoints;
     Vector2D playerSpawn{64.0f, 64.0f};
 };

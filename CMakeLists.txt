@@ -12,13 +12,25 @@ find_package(Lua REQUIRED)
 
 add_executable(PokemonCipher
   src/main.cpp
+  src/app/LaunchOptions.cpp
   src/engine/Game.cpp
   src/engine/TextureManager.cpp
   src/engine/Map.cpp
   src/engine/TilemapRenderer.cpp
 
   src/game/OverworldScene.cpp
+  src/game/OverworldSceneMap.cpp
+  src/game/OverworldSceneDev.cpp
+  src/game/dev/OverworldDevConsole.cpp
+  src/game/dev/OverworldDevConsoleParsing.cpp
+  src/game/dev/OverworldDevConsoleInfoHandlers.cpp
+  src/game/dev/OverworldDevConsoleScriptHandlers.cpp
+  src/game/dev/OverworldDevConsoleTravelHandlers.cpp
+  src/game/dev/OverworldDevConsoleStateHandlers.cpp
   src/game/scripting/LuaOverworldScriptLoader.cpp
+  src/game/ui/DialogueOverlay.cpp
+  src/game/world/DefaultMapRegistry.cpp
+  src/game/world/OverworldEntityFactory.cpp
 
   src/engine/manager/AssetManager.cpp
 

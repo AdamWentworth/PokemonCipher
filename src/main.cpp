@@ -2,14 +2,24 @@
 
 #include <memory>
 
+#include "app/LaunchOptions.h"
 #include "engine/Game.h"
 #include "game/OverworldScene.h"
 #include "game/state/GameState.h"
+#include "game/world/DefaultMapRegistry.h"
 #include "game/world/MapRegistry.h"
 
 int main(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
+    const LaunchOptions bootOptions = parseLaunchOptions(argc, argv);
+    if (!bootOptions.valid) {
+        printLaunchUsage();
+        return 1;
+    }
+
+    if (bootOptions.showHelp) {
+        printLaunchUsage();
+        return 0;
+    }
 
     constexpr int windowWidth = 960;
     constexpr int windowHeight = 640;
@@ -28,36 +38,33 @@ int main(int argc, char** argv) {
     auto& scenes = game.sceneManager();
     auto& textures = game.textureManager();
     GameState gameState;
-    MapRegistry mapRegistry;
 
-    MapDefinition palletTown{};
-    palletTown.id = "pallet_town";
-    palletTown.mapPath = "assets/maps/pallet_town/pallet_town_map.tmx";
-    palletTown.baseTilesetPath = "assets/tilesets/pallet_town/pallet_town_tileset.png";
-    palletTown.coverTilesetPath = "";
-    mapRegistry.addMap(palletTown);
+    if (bootOptions.mode == BootMode::Overworld) {
+        gameState.setFlag("intro_complete", true);
+    } else if (bootOptions.mode == BootMode::Intro) {
+        gameState.setFlag("intro_complete", false);
+        gameState.setFlag("starter_eevee_obtained", false);
+        gameState.setVar("story_checkpoint", 0);
+        gameState.clearParty();
+    }
 
-    MapDefinition route1{};
-    route1.id = "route_1";
-    route1.mapPath = "assets/maps/route_1/route_1_map.tmx";
-    route1.baseTilesetPath = "assets/tilesets/route_1/route_1_tileset.png";
-    route1.coverTilesetPath = "";
-    mapRegistry.addMap(route1);
+    MapRegistry mapRegistry = buildDefaultMapRegistry();
 
-    mapRegistry.addAlias("map_pallet_town", "pallet_town");
-    mapRegistry.addAlias("route1", "route_1");
-    mapRegistry.addAlias("map_route1", "route_1");
-    mapRegistry.addAlias("map_route_1", "route_1");
-
-    scenes.registerScene("overworld", [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight]() {
-        return std::make_unique<OverworldScene>(
+    scenes.registerScene("overworld", [&textures, &gameState, &mapRegistry, logicalWidth, logicalHeight, bootOptions]() {
+        auto scene = std::make_unique<OverworldScene>(
             textures,
             gameState,
             mapRegistry,
-            "pallet_town",
+            bootOptions.mapId,
             logicalWidth,
             logicalHeight
         );
+
+        if (bootOptions.spawnId != "default") {
+            scene->warpTo(bootOptions.mapId, bootOptions.spawnId);
+        }
+
+        return scene;
     });
 
     if (!scenes.changeScene("overworld")) {

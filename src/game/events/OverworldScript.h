@@ -11,11 +11,14 @@
 
 enum class OverworldScriptCommandType {
     Log,
+    Dialogue,
     WaitSeconds,
     LockInput,
     UnlockInput,
     SetFlag,
     SetVar,
+    ClearParty,
+    AddPartyPokemon,
     WarpToSpawn,
     WarpToPosition,
     TeleportPosition
@@ -28,12 +31,21 @@ struct OverworldScriptCommand {
     std::string secondary;
     float floatValue = 0.0f;
     int intValue = 0;
+    int intValueSecondary = 0;
     bool boolValue = false;
     Vector2D position{};
 
     static OverworldScriptCommand Log(std::string message) {
         OverworldScriptCommand command;
         command.type = OverworldScriptCommandType::Log;
+        command.text = std::move(message);
+        return command;
+    }
+
+    static OverworldScriptCommand Dialogue(std::string speaker, std::string message) {
+        OverworldScriptCommand command;
+        command.type = OverworldScriptCommandType::Dialogue;
+        command.key = std::move(speaker);
         command.text = std::move(message);
         return command;
     }
@@ -73,6 +85,21 @@ struct OverworldScriptCommand {
         return command;
     }
 
+    static OverworldScriptCommand ClearParty() {
+        OverworldScriptCommand command;
+        command.type = OverworldScriptCommandType::ClearParty;
+        return command;
+    }
+
+    static OverworldScriptCommand AddPartyPokemon(const int speciesId, const int level, const bool isPartner = false) {
+        OverworldScriptCommand command;
+        command.type = OverworldScriptCommandType::AddPartyPokemon;
+        command.intValue = speciesId;
+        command.intValueSecondary = level;
+        command.boolValue = isPartner;
+        return command;
+    }
+
     static OverworldScriptCommand WarpToSpawn(std::string mapId, std::string spawnId) {
         OverworldScriptCommand command;
         command.type = OverworldScriptCommandType::WarpToSpawn;
@@ -107,6 +134,9 @@ public:
     struct Runtime {
         GameState& gameState;
         std::function<void(const std::string&)> log;
+        std::function<void(const std::string&, const std::string&)> showDialogue;
+        std::function<void()> hideDialogue;
+        std::function<bool()> consumeAdvanceRequested;
         std::function<void(bool)> setInputEnabled;
         std::function<bool(const std::string&, const std::string&)> warpToSpawn;
         std::function<bool(const std::string&, const Vector2D&)> warpToPosition;
@@ -121,6 +151,7 @@ public:
         activeScript_ = script;
         currentCommandIndex_ = 0;
         waitRemainingSeconds_ = 0.0f;
+        waitingForAdvance_ = false;
         return true;
     }
 
@@ -128,6 +159,7 @@ public:
         activeScript_ = nullptr;
         currentCommandIndex_ = 0;
         waitRemainingSeconds_ = 0.0f;
+        waitingForAdvance_ = false;
     }
 
     bool isRunning() const {
@@ -141,6 +173,15 @@ public:
     void update(const float dt, Runtime& runtime) {
         if (!activeScript_) {
             return;
+        }
+
+        if (waitingForAdvance_) {
+            if (!runtime.consumeAdvanceRequested()) {
+                return;
+            }
+
+            runtime.hideDialogue();
+            waitingForAdvance_ = false;
         }
 
         if (waitRemainingSeconds_ > 0.0f) {
@@ -164,6 +205,11 @@ public:
                 runtime.log(command.text);
                 break;
 
+            case OverworldScriptCommandType::Dialogue:
+                runtime.showDialogue(command.key, command.text);
+                waitingForAdvance_ = true;
+                return;
+
             case OverworldScriptCommandType::WaitSeconds:
                 waitRemainingSeconds_ = std::max(0.0f, command.floatValue);
                 if (waitRemainingSeconds_ > 0.0f) {
@@ -185,6 +231,14 @@ public:
 
             case OverworldScriptCommandType::SetVar:
                 runtime.gameState.setVar(command.key, command.intValue);
+                break;
+
+            case OverworldScriptCommandType::ClearParty:
+                runtime.gameState.clearParty();
+                break;
+
+            case OverworldScriptCommandType::AddPartyPokemon:
+                runtime.gameState.addPartyPokemon(command.intValue, command.intValueSecondary, command.boolValue);
                 break;
 
             case OverworldScriptCommandType::WarpToSpawn: {
@@ -214,4 +268,5 @@ private:
     const OverworldScript* activeScript_ = nullptr;
     std::size_t currentCommandIndex_ = 0;
     float waitRemainingSeconds_ = 0.0f;
+    bool waitingForAdvance_ = false;
 };

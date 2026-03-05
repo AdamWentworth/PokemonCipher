@@ -21,6 +21,7 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 - `help` to list commands
 - `maps` / `map` / `spawns` / `pos` for quick map inspection
 - `scripts`, `runscript <id>`, `stopscript` for event-sequence testing
+- `startintro`, `resetintro`, `party` for intro/party testing
 - `warp <mapId> [spawnId]` to jump maps
 - `warptile <mapId> <tx> <ty>` and `warpxy <mapId> <x> <y>` for coordinate warps
 - `goto <tx> <ty>` and `teleport <x> <y>` to reposition on current map
@@ -31,7 +32,8 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 - `runscript <id>` loads `assets/scripts/<id>.lua`
 - Scripts must `return` an array of command arrays
 - Supported ops:
-  `log`, `wait`, `lock_input`, `unlock_input`, `set_flag`, `set_var`, `warp_spawn`, `warp_xy`, `teleport`
+  `log`, `say`, `wait`, `lock_input`, `unlock_input`, `set_flag`, `set_var`,
+  `clear_party`, `add_party`, `warp_spawn`, `warp_xy`, `teleport`
 - Example: see `assets/scripts/dev_bootstrap_pallet.lua`
 
 ## Build
@@ -39,6 +41,16 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 1. Configure: `cmake --preset vs2026`
 2. Build: `cmake --build --preset debug`
 3. Run: `build/Debug/PokemonCipher.exe`
+
+Optional dev launch args:
+- `--boot auto|intro|overworld`
+- `--map <mapId>`
+- `--spawn <spawnId>`
+
+Optional env vars:
+- `POKEMONCIPHER_BOOT_MODE`
+- `POKEMONCIPHER_MAP`
+- `POKEMONCIPHER_SPAWN`
 
 ## Regenerate Pallet Town Assets
 

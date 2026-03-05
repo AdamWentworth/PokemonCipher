@@ -19,6 +19,7 @@ public:
         const SDL_FRect& dst,
         SDL_FlipMode flip = SDL_FLIP_NONE
     ) const;
+    SDL_Renderer* renderer() const;
     void clear();
 
 private:

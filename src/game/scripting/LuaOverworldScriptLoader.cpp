@@ -168,6 +168,15 @@ bool loadOverworldScriptFromLuaFile(
                 return false;
             }
             outScript.commands.push_back(OverworldScriptCommand::Log(message));
+        } else if (op == "say") {
+            std::string speaker;
+            std::string message;
+            if (!readStringArg(lua.get(), commandIndex, 2, i, speaker, errorOut) ||
+                !readStringArg(lua.get(), commandIndex, 3, i, message, errorOut)) {
+                lua_pop(lua.get(), 1);
+                return false;
+            }
+            outScript.commands.push_back(OverworldScriptCommand::Dialogue(speaker, message));
         } else if (op == "wait") {
             float seconds = 0.0f;
             if (!readNumberArg(lua.get(), commandIndex, 2, i, seconds, errorOut)) {
@@ -197,6 +206,25 @@ bool loadOverworldScriptFromLuaFile(
                 return false;
             }
             outScript.commands.push_back(OverworldScriptCommand::SetVar(key, value));
+        } else if (op == "clear_party") {
+            outScript.commands.push_back(OverworldScriptCommand::ClearParty());
+        } else if (op == "add_party") {
+            int speciesId = 0;
+            int level = 1;
+            bool isPartner = false;
+            if (!readIntegerArg(lua.get(), commandIndex, 2, i, speciesId, errorOut) ||
+                !readIntegerArg(lua.get(), commandIndex, 3, i, level, errorOut)) {
+                lua_pop(lua.get(), 1);
+                return false;
+            }
+
+            lua_rawgeti(lua.get(), commandIndex, 4);
+            if (lua_isboolean(lua.get(), -1)) {
+                isPartner = lua_toboolean(lua.get(), -1) != 0;
+            }
+            lua_pop(lua.get(), 1);
+
+            outScript.commands.push_back(OverworldScriptCommand::AddPartyPokemon(speciesId, level, isPartner));
         } else if (op == "warp_spawn") {
             std::string mapId;
             std::string spawnId = "default";

@@ -2,10 +2,12 @@
 
 #include <SDL3/SDL_events.h>
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 
+#include "game/dev/OverworldDevConsole.h"
 #include "engine/Map.h"
 #include "engine/TextureManager.h"
 #include "engine/TilemapRenderer.h"
@@ -14,6 +16,7 @@
 #include "game/events/OverworldScript.h"
 #include "game/state/GameState.h"
 #include "game/systems/GridMovementSystem.h"
+#include "game/ui/DialogueOverlay.h"
 #include "game/world/MapRegistry.h"
 
 class OverworldScene : public Scene {
@@ -38,12 +41,13 @@ public:
     const std::string& currentMapId() const { return currentMapId_; }
 
 private:
+    void createDevConsole();
     void registerDefaultScripts();
     void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
     void setDebugConsoleOpen(bool isOpen);
-    void executeConsoleCommand(const std::string& commandLine);
     void printConsole(const std::string& message) const;
+    bool consumeScriptAdvanceRequested();
 
     bool loadMap(
         const std::string& mapId,
@@ -52,13 +56,6 @@ private:
     );
     void checkMapWarps(float dt);
     static std::string normalizeMapKey(std::string key);
-    void createStaticCollisionEntities();
-    void createCameraEntity(int viewportWidth, int viewportHeight);
-    void createPlayerEntity(const Vector2D& spawnPoint);
-    void resolveCollisions();
-    static bool parseBoolToken(const std::string& token, bool& valueOut);
-    static bool parseIntToken(const std::string& token, int& valueOut);
-    static bool parseFloatToken(const std::string& token, float& valueOut);
 
     TextureManager& textureManager_;
     GameState& gameState_;
@@ -70,11 +67,15 @@ private:
     bool debugConsoleOpen_ = false;
     std::string debugConsoleInput_;
     bool scriptInputLocked_ = false;
+    bool introScriptChecked_ = false;
+    bool scriptAdvanceRequested_ = false;
 
     Map map_;
     TilemapRenderer tilemapRenderer_;
+    DialogueOverlay dialogueOverlay_;
     World world_;
     GridMovementSystem gridMovementSystem_;
+    std::unique_ptr<OverworldDevConsole> devConsole_;
     std::unordered_map<std::string, OverworldScript> scripts_;
     OverworldScriptRunner scriptRunner_;
 };

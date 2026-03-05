@@ -3,6 +3,13 @@
 #include <cctype>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+struct PartyPokemon {
+    int speciesId = 0;
+    int level = 1;
+    bool isPartner = false;
+};
 
 class GameState {
 public:
@@ -32,6 +39,22 @@ public:
         return it->second;
     }
 
+    void clearParty() {
+        party_.clear();
+    }
+
+    void addPartyPokemon(const int speciesId, const int level, const bool isPartner = false) {
+        PartyPokemon pokemon{};
+        pokemon.speciesId = speciesId;
+        pokemon.level = level;
+        pokemon.isPartner = isPartner;
+        party_.push_back(pokemon);
+    }
+
+    const std::vector<PartyPokemon>& party() const {
+        return party_;
+    }
+
 private:
     static std::string normalize(const std::string& key) {
         std::string normalized;
@@ -44,4 +67,5 @@ private:
 
     std::unordered_map<std::string, bool> flags_;
     std::unordered_map<std::string, int> vars_;
+    std::vector<PartyPokemon> party_;
 };

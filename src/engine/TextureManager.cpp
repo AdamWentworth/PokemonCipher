@@ -116,6 +116,10 @@ void TextureManager::draw(
     SDL_RenderTextureRotated(renderer_, texture, &src, &dst, 0.0, nullptr, flip);
 }
 
+SDL_Renderer* TextureManager::renderer() const {
+    return renderer_;
+}
+
 void TextureManager::clear() {
     for (auto& [_, texture] : textures_) {
         if (texture) {

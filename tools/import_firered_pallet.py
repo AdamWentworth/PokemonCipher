@@ -1,6 +1,7 @@
 import argparse
 import json
 import math
+import os
 import struct
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -266,27 +267,6 @@ def build_organized_metatile_mapping(metatile_ids: list[int]) -> tuple[list[int]
     ordered_ids = sorted(set(metatile_ids))
     base_gid_by_metatile_id = {old_id: index + 1 for index, old_id in enumerate(ordered_ids)}
     return ordered_ids, base_gid_by_metatile_id
-
-
-def write_metatile_mapping_json(
-    path: Path,
-    ordered_ids: list[int],
-    base_gid_by_metatile_id: dict[int, int],
-    cover_gid_by_metatile_id: dict[int, int],
-) -> None:
-    payload = {
-        "layout": "LAYOUT_PALLET_TOWN",
-        "columns": ORGANIZED_ATLAS_COLUMNS,
-        "entries": [
-            {
-                "source_metatile_id": source_id,
-                "base_gid": base_gid_by_metatile_id[source_id],
-                "cover_gid": cover_gid_by_metatile_id.get(source_id),
-            }
-            for source_id in ordered_ids
-        ],
-    }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def render_layer_from_atlas(
@@ -588,19 +568,16 @@ def main() -> None:
     tilesets_dir = assets_dir / "tilesets"
     characters_dir = assets_dir / "characters"
     animations_dir = assets_dir / "animations"
+    map_slug = "pallet_town"
+    map_output_dir = maps_dir / map_slug
+    tileset_key = f"{primary_name}__{secondary_name}"
+    tileset_output_dir = tilesets_dir / "frlg" / tileset_key
 
-    maps_dir.mkdir(parents=True, exist_ok=True)
-    tilesets_dir.mkdir(parents=True, exist_ok=True)
+    map_output_dir.mkdir(parents=True, exist_ok=True)
+    tileset_output_dir.mkdir(parents=True, exist_ok=True)
 
-    tileset_output = tilesets_dir / "pallet_town_metatiles_organized.png"
-    metatile_index_output = maps_dir / "pallet_town_metatile_index.json"
+    tileset_output = tileset_output_dir / "metatiles_organized.png"
     organized_atlas.save(tileset_output)
-    write_metatile_mapping_json(
-        metatile_index_output,
-        ordered_metatile_ids,
-        base_gid_by_metatile_id,
-        cover_gid_by_metatile_id,
-    )
 
     map_json = json.loads((firered_root / "data" / "maps" / "PalletTown" / "map.json").read_text(encoding="utf-8"))
     warp_events = map_json.get("warp_events", [])
@@ -610,13 +587,15 @@ def main() -> None:
     spawn_x = 6 * tile_size
     spawn_y = 9 * tile_size
     ground_layer_values = [base_gid_by_metatile_id[metatile_id] for metatile_id in metatile_ids]
+    tmx_output = map_output_dir / "map.tmx"
+    tileset_image_rel_path = os.path.relpath(tileset_output, map_output_dir).replace("\\", "/")
 
     write_tmx(
-        maps_dir / "pallet_town.tmx",
+        tmx_output,
         map_width,
         map_height,
         tile_size,
-        "../tilesets/pallet_town_metatiles_organized.png",
+        tileset_image_rel_path,
         atlas_columns,
         atlas_tile_count,
         ground_layer_values,
@@ -631,7 +610,7 @@ def main() -> None:
     map_cover_image = render_layer_from_atlas(organized_atlas, cover_layer_values, map_width, map_height, tile_size)
     map_composite_image = map_ground_image.copy()
     map_composite_image.alpha_composite(map_cover_image)
-    map_composite_output = maps_dir / "pallet_town_composite.png"
+    map_composite_output = map_output_dir / "preview.png"
     map_composite_image.save(map_composite_output)
 
     colorize_object_sprite(
@@ -643,9 +622,8 @@ def main() -> None:
     write_red_animation_xml(animations_dir / "red_overworld.xml")
 
     print("Imported FireRed Pallet Town assets:")
-    print(f"- {maps_dir / 'pallet_town.tmx'}")
+    print(f"- {tmx_output}")
     print(f"- {tileset_output}")
-    print(f"- {metatile_index_output}")
     print(f"- {map_composite_output}")
     print(f"- {characters_dir / 'red_normal.png'}")
     print(f"- {animations_dir / 'red_overworld.xml'}")

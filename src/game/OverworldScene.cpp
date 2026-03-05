@@ -158,6 +158,8 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
 }
 
 void OverworldScene::update(const float dt) {
+    dialogueOverlay_.update(dt, gameState_.isTextSpeedFast());
+
     if (!introScriptChecked_) {
         introScriptChecked_ = true;
         if (!gameState_.getFlag("intro_complete")) {

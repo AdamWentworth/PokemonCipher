@@ -1,6 +1,7 @@
 #include "game/ui/DialogueOverlay.h"
 
 #include <algorithm>
+#include <cmath>
 #include <sstream>
 #include <vector>
 
@@ -62,14 +63,46 @@ std::vector<std::string> wrapDialogueText(const std::string& text, const std::si
 
 void DialogueOverlay::show(const std::string& speaker, const std::string& text) {
     speaker_ = speaker;
-    text_ = text;
+    fullText_ = text;
+    revealedChars_ = 0;
+    revealAccumulator_ = 0.0f;
     visible_ = true;
 }
 
 void DialogueOverlay::hide() {
     visible_ = false;
     speaker_.clear();
-    text_.clear();
+    fullText_.clear();
+    revealedChars_ = 0;
+    revealAccumulator_ = 0.0f;
+}
+
+void DialogueOverlay::update(const float dt, const bool fastText) {
+    if (!visible_ || isFullyRevealed()) {
+        return;
+    }
+
+    constexpr float kNormalCharsPerSecond = 36.0f;
+    constexpr float kFastCharsPerSecond = 72.0f;
+    const float charsPerSecond = fastText ? kFastCharsPerSecond : kNormalCharsPerSecond;
+
+    revealAccumulator_ += dt * charsPerSecond;
+    const auto charsToReveal = static_cast<std::size_t>(std::floor(revealAccumulator_));
+    if (charsToReveal == 0) {
+        return;
+    }
+
+    revealAccumulator_ -= static_cast<float>(charsToReveal);
+    revealedChars_ = std::min(fullText_.size(), revealedChars_ + charsToReveal);
+}
+
+bool DialogueOverlay::isFullyRevealed() const {
+    return revealedChars_ >= fullText_.size();
+}
+
+void DialogueOverlay::revealAll() {
+    revealedChars_ = fullText_.size();
+    revealAccumulator_ = 0.0f;
 }
 
 void DialogueOverlay::render(SDL_Renderer* renderer, const int viewportWidth, const int viewportHeight) const {
@@ -99,11 +132,13 @@ void DialogueOverlay::render(SDL_Renderer* renderer, const int viewportWidth, co
 
     SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
     const std::size_t maxCharsPerLine = static_cast<std::size_t>(std::max(8.0f, (box.w - 12.0f) / 8.0f));
-    const std::vector<std::string> lines = wrapDialogueText(text_, maxCharsPerLine, 2);
+    const std::vector<std::string> lines = wrapDialogueText(fullText_.substr(0, revealedChars_), maxCharsPerLine, 2);
     for (std::size_t i = 0; i < lines.size(); ++i) {
         const float y = box.y + 18.0f + (static_cast<float>(i) * 10.0f);
         SDL_RenderDebugText(renderer, box.x + 6.0f, y, lines[i].c_str());
     }
 
-    SDL_RenderDebugText(renderer, box.x + box.w - 10.0f, box.y + box.h - 10.0f, ">");
+    if (isFullyRevealed()) {
+        SDL_RenderDebugText(renderer, box.x + box.w - 10.0f, box.y + box.h - 10.0f, ">");
+    }
 }

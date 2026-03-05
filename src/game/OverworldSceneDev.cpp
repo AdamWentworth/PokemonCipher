@@ -159,5 +159,14 @@ void OverworldScene::printConsole(const std::string& message) const {
 bool OverworldScene::consumeScriptAdvanceRequested() {
     const bool requested = scriptAdvanceRequested_;
     scriptAdvanceRequested_ = false;
-    return requested;
+    if (!requested) {
+        return false;
+    }
+
+    if (dialogueOverlay_.isVisible() && !dialogueOverlay_.isFullyRevealed()) {
+        dialogueOverlay_.revealAll();
+        return false;
+    }
+
+    return true;
 }

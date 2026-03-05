@@ -15,7 +15,7 @@ bool handleInfoCommand(
 ) {
     if (command == "help") {
         if (dependencies.print) {
-            dependencies.print("Commands: help, maps, map, spawns, pos, scripts, runscript <id>, stopscript, startintro, resetintro, party, warp <mapId> [spawnId], warptile <mapId> <tx> <ty>, warpxy <mapId> <x> <y>, goto <tx> <ty>, teleport <x> <y>, setflag <k> <0|1>, getflag <k>, setvar <k> <n>, getvar <k>, reload");
+            dependencies.print("Commands: help, maps, map, spawns, pos, scripts, runscript <id>, stopscript, startintro, resetintro, party, warp <mapId> [spawnId], warptile <mapId> <tx> <ty>, warpxy <mapId> <x> <y>, goto <tx> <ty>, teleport <x> <y>, setflag <k> <0|1>, getflag <k>, setvar <k> <n>, getvar <k>, settextspeed <normal|fast>, gettextspeed, setbattlestyle <shift|set>, getbattlestyle, reload");
         }
         return true;
     }

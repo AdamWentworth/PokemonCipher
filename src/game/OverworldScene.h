@@ -4,12 +4,14 @@
 
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "engine/Map.h"
 #include "engine/TextureManager.h"
 #include "engine/TilemapRenderer.h"
 #include "engine/ecs/World.h"
 #include "engine/manager/Scene.h"
+#include "game/events/OverworldScript.h"
 #include "game/state/GameState.h"
 #include "game/systems/GridMovementSystem.h"
 #include "game/world/MapRegistry.h"
@@ -32,9 +34,12 @@ public:
     bool warpTo(const std::string& mapId, const std::string& spawnId = "default");
     bool warpTo(const std::string& mapId, const Vector2D& spawnPoint);
     bool teleportPlayer(const Vector2D& pixelPosition);
+    bool runScript(const std::string& scriptId);
     const std::string& currentMapId() const { return currentMapId_; }
 
 private:
+    void registerDefaultScripts();
+    void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
     void setDebugConsoleOpen(bool isOpen);
     void executeConsoleCommand(const std::string& commandLine);
@@ -64,9 +69,12 @@ private:
     float warpCooldownSeconds_ = 0.0f;
     bool debugConsoleOpen_ = false;
     std::string debugConsoleInput_;
+    bool scriptInputLocked_ = false;
 
     Map map_;
     TilemapRenderer tilemapRenderer_;
     World world_;
     GridMovementSystem gridMovementSystem_;
+    std::unordered_map<std::string, OverworldScript> scripts_;
+    OverworldScriptRunner scriptRunner_;
 };

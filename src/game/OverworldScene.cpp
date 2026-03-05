@@ -44,6 +44,7 @@ OverworldScene::OverworldScene(
         std::cout << "Failed to load initial map id: " << initialMapId << '\n';
     }
 
+    registerDefaultScripts();
     refreshInputState();
 }
 
@@ -83,6 +84,26 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
 }
 
 void OverworldScene::update(const float dt) {
+    OverworldScriptRunner::Runtime scriptRuntime{
+        gameState_,
+        [this](const std::string& message) {
+            printConsole("[script] " + message);
+        },
+        [this](const bool isInputEnabled) {
+            setScriptInputEnabled(isInputEnabled);
+        },
+        [this](const std::string& mapId, const std::string& spawnId) {
+            return warpTo(mapId, spawnId);
+        },
+        [this](const std::string& mapId, const Vector2D& spawnPoint) {
+            return warpTo(mapId, spawnPoint);
+        },
+        [this](const Vector2D& position) {
+            return teleportPlayer(position);
+        }
+    };
+    scriptRunner_.update(dt, scriptRuntime);
+
     gridMovementSystem_.update(world_.entities(), dt);
     world_.update(dt);
     resolveCollisions();
@@ -150,6 +171,24 @@ bool OverworldScene::teleportPlayer(const Vector2D& pixelPosition) {
         gridMovement.applyWalkStartFrame = false;
     }
 
+    return true;
+}
+
+bool OverworldScene::runScript(const std::string& scriptId) {
+    const std::string scriptKey = normalizeMapKey(scriptId);
+    const auto it = scripts_.find(scriptKey);
+    if (it == scripts_.end()) {
+        return false;
+    }
+
+    scriptRunner_.stop();
+    setScriptInputEnabled(true);
+
+    if (!scriptRunner_.start(&it->second)) {
+        return false;
+    }
+
+    printConsole("Running script: " + it->second.id);
     return true;
 }
 
@@ -236,8 +275,31 @@ std::string OverworldScene::normalizeMapKey(std::string key) {
     return key;
 }
 
+void OverworldScene::registerDefaultScripts() {
+    scripts_.clear();
+
+    OverworldScript bootstrapPalletScript{};
+    bootstrapPalletScript.id = "dev_bootstrap_pallet";
+    bootstrapPalletScript.commands = {
+        OverworldScriptCommand::LockInput(),
+        OverworldScriptCommand::Log("Bootstrapping Pallet Town test state."),
+        OverworldScriptCommand::WarpToSpawn("pallet_town", "default"),
+        OverworldScriptCommand::SetFlag("intro_complete", true),
+        OverworldScriptCommand::SetVar("story_checkpoint", 1),
+        OverworldScriptCommand::Wait(0.2f),
+        OverworldScriptCommand::UnlockInput()
+    };
+
+    scripts_.emplace(normalizeMapKey(bootstrapPalletScript.id), bootstrapPalletScript);
+}
+
+void OverworldScene::setScriptInputEnabled(const bool isEnabled) {
+    scriptInputLocked_ = !isEnabled;
+    refreshInputState();
+}
+
 void OverworldScene::refreshInputState() {
-    gridMovementSystem_.setInputEnabled(!debugConsoleOpen_);
+    gridMovementSystem_.setInputEnabled(!debugConsoleOpen_ && !scriptInputLocked_);
 }
 
 void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
@@ -275,7 +337,7 @@ void OverworldScene::executeConsoleCommand(const std::string& commandLine) {
     const std::string command = normalizeMapKey(tokens[0]);
 
     if (command == "help") {
-        printConsole("Commands: help, maps, map, spawns, pos, warp <mapId> [spawnId], warptile <mapId> <tx> <ty>, warpxy <mapId> <x> <y>, goto <tx> <ty>, teleport <x> <y>, setflag <k> <0|1>, getflag <k>, setvar <k> <n>, getvar <k>, reload");
+        printConsole("Commands: help, maps, map, spawns, pos, scripts, runscript <id>, stopscript, warp <mapId> [spawnId], warptile <mapId> <tx> <ty>, warpxy <mapId> <x> <y>, goto <tx> <ty>, teleport <x> <y>, setflag <k> <0|1>, getflag <k>, setvar <k> <n>, getvar <k>, reload");
         return;
     }
 
@@ -296,6 +358,54 @@ void OverworldScene::executeConsoleCommand(const std::string& commandLine) {
 
     if (command == "map") {
         printConsole("Current map: " + currentMapId_);
+        return;
+    }
+
+    if (command == "scripts") {
+        if (scripts_.empty()) {
+            printConsole("No scripts registered.");
+            return;
+        }
+
+        std::vector<std::string> scriptIds;
+        scriptIds.reserve(scripts_.size());
+        for (const auto& [_, script] : scripts_) {
+            scriptIds.push_back(script.id);
+        }
+        std::sort(scriptIds.begin(), scriptIds.end());
+
+        std::string line = "Scripts:";
+        for (const std::string& scriptId : scriptIds) {
+            line += " " + scriptId;
+        }
+
+        printConsole(line);
+        return;
+    }
+
+    if (command == "runscript") {
+        if (tokens.size() != 2) {
+            printConsole("Usage: runscript <scriptId>");
+            return;
+        }
+
+        if (!runScript(tokens[1])) {
+            printConsole("Script not found: " + tokens[1]);
+            return;
+        }
+
+        return;
+    }
+
+    if (command == "stopscript") {
+        if (!scriptRunner_.isRunning()) {
+            printConsole("No script is running.");
+            return;
+        }
+
+        scriptRunner_.stop();
+        setScriptInputEnabled(true);
+        printConsole("Script stopped.");
         return;
     }
 

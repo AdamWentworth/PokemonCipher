@@ -262,15 +262,10 @@ def merge_collision_runs(blocked_grid: list[bool], width: int, height: int, tile
     return rectangles
 
 
-def build_organized_metatile_mapping(metatile_ids: list[int]) -> tuple[list[int], dict[int, int], dict[int, int]]:
+def build_organized_metatile_mapping(metatile_ids: list[int]) -> tuple[list[int], dict[int, int]]:
     ordered_ids = sorted(set(metatile_ids))
     base_gid_by_metatile_id = {old_id: index + 1 for index, old_id in enumerate(ordered_ids)}
-    cover_gid_start = len(ordered_ids) + 1
-    cover_gid_by_metatile_id = {
-        old_id: cover_gid_start + index
-        for index, old_id in enumerate(ordered_ids)
-    }
-    return ordered_ids, base_gid_by_metatile_id, cover_gid_by_metatile_id
+    return ordered_ids, base_gid_by_metatile_id
 
 
 def write_metatile_mapping_json(
@@ -286,7 +281,7 @@ def write_metatile_mapping_json(
             {
                 "source_metatile_id": source_id,
                 "base_gid": base_gid_by_metatile_id[source_id],
-                "cover_gid": cover_gid_by_metatile_id[source_id],
+                "cover_gid": cover_gid_by_metatile_id.get(source_id),
             }
             for source_id in ordered_ids
         ],
@@ -506,14 +501,14 @@ def main() -> None:
     map_values = read_map_grid(firered_root / "data" / "layouts" / "PalletTown" / "map.bin", map_width, map_height)
 
     metatile_ids = [value & MAPGRID_METATILE_ID_MASK for value in map_values]
-    ordered_metatile_ids, base_gid_by_metatile_id, cover_gid_by_metatile_id = build_organized_metatile_mapping(metatile_ids)
+    ordered_metatile_ids, base_gid_by_metatile_id = build_organized_metatile_mapping(metatile_ids)
     collision_bits = [(value & MAPGRID_COLLISION_MASK) >> MAPGRID_COLLISION_SHIFT for value in map_values]
     atlas_columns = ORGANIZED_ATLAS_COLUMNS
-    atlas_tile_count = len(ordered_metatile_ids) * 2
-    atlas_rows = math.ceil(atlas_tile_count / atlas_columns)
-    organized_atlas = Image.new("RGBA", (atlas_columns * tile_size, atlas_rows * tile_size), (0, 0, 0, 0))
     cover_layer_values = [0] * len(metatile_ids)
     blocked_tiles = [False] * len(metatile_ids)
+    rendered_base_by_metatile_id: dict[int, Image.Image] = {}
+    rendered_cover_by_metatile_id: dict[int, Image.Image] = {}
+    cover_metatile_ids: list[int] = []
 
     for metatile_id in ordered_metatile_ids:
         entry = get_metatile_entry(metatile_id, primary_metatiles, secondary_metatiles)
@@ -545,15 +540,35 @@ def main() -> None:
                 draw_top_layer=draw_top_in_cover,
             )
 
+        rendered_base_by_metatile_id[metatile_id] = base_rendered
+        rendered_cover_by_metatile_id[metatile_id] = cover_rendered
+        if cover_rendered.getbbox() is not None:
+            cover_metatile_ids.append(metatile_id)
+
+    cover_gid_start = len(ordered_metatile_ids) + 1
+    cover_gid_by_metatile_id = {
+        metatile_id: cover_gid_start + index
+        for index, metatile_id in enumerate(cover_metatile_ids)
+    }
+
+    atlas_tile_count = len(ordered_metatile_ids) + len(cover_metatile_ids)
+    atlas_rows = math.ceil(atlas_tile_count / atlas_columns)
+    organized_atlas = Image.new("RGBA", (atlas_columns * tile_size, atlas_rows * tile_size), (0, 0, 0, 0))
+
+    for metatile_id in ordered_metatile_ids:
         base_tile_index = base_gid_by_metatile_id[metatile_id] - 1
         base_dst_x = (base_tile_index % atlas_columns) * tile_size
         base_dst_y = (base_tile_index // atlas_columns) * tile_size
+        base_rendered = rendered_base_by_metatile_id[metatile_id]
         organized_atlas.paste(base_rendered, (base_dst_x, base_dst_y), base_rendered)
 
-        cover_tile_index = cover_gid_by_metatile_id[metatile_id] - 1
-        cover_dst_x = (cover_tile_index % atlas_columns) * tile_size
-        cover_dst_y = (cover_tile_index // atlas_columns) * tile_size
-        organized_atlas.paste(cover_rendered, (cover_dst_x, cover_dst_y), cover_rendered)
+        cover_gid = cover_gid_by_metatile_id.get(metatile_id)
+        if cover_gid is not None:
+            cover_tile_index = cover_gid - 1
+            cover_dst_x = (cover_tile_index % atlas_columns) * tile_size
+            cover_dst_y = (cover_tile_index // atlas_columns) * tile_size
+            cover_rendered = rendered_cover_by_metatile_id[metatile_id]
+            organized_atlas.paste(cover_rendered, (cover_dst_x, cover_dst_y), cover_rendered)
 
     for index, metatile_id in enumerate(metatile_ids):
         attributes = get_metatile_attributes(metatile_id, primary_attributes, secondary_attributes)
@@ -566,7 +581,7 @@ def main() -> None:
         blocked_tiles[index] = is_map_collision_blocked or is_water_blocked
 
         if layer_type in (METATILE_LAYER_TYPE_NORMAL, METATILE_LAYER_TYPE_SPLIT):
-            cover_layer_values[index] = cover_gid_by_metatile_id[metatile_id]
+            cover_layer_values[index] = cover_gid_by_metatile_id.get(metatile_id, 0)
 
     assets_dir = project_root / "assets"
     maps_dir = assets_dir / "maps"

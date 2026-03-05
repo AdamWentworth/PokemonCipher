@@ -54,7 +54,7 @@ void createNpcEntities(World& world, const Map& map, TextureManager& textureMana
     }
 
     constexpr const char* kDefaultAnimationPath = "assets/animations/red_overworld.xml";
-    constexpr const char* kDefaultSpritePath = "assets/characters/red_normal.png";
+    constexpr const char* kDefaultSpritePath = "assets/characters/oak/oak_overworld.png";
     constexpr const char* kNpcAnimationKey = "npc_default";
 
     if (!AssetManager::hasAnimation(kNpcAnimationKey)) {

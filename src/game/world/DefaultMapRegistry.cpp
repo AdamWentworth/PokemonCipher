@@ -17,10 +17,19 @@ MapRegistry buildDefaultMapRegistry() {
     route1.coverTilesetPath = "";
     mapRegistry.addMap(route1);
 
+    MapDefinition oaksLab{};
+    oaksLab.id = "pallet_town_professor_oaks_lab";
+    oaksLab.mapPath = "assets/maps/pallet_town_professor_oaks_lab/pallet_town_professor_oaks_lab_map.tmx";
+    oaksLab.baseTilesetPath = "assets/tilesets/pallet_town_professor_oaks_lab/pallet_town_professor_oaks_lab_tileset.png";
+    oaksLab.coverTilesetPath = "";
+    mapRegistry.addMap(oaksLab);
+
     mapRegistry.addAlias("map_pallet_town", "pallet_town");
     mapRegistry.addAlias("route1", "route_1");
     mapRegistry.addAlias("map_route1", "route_1");
     mapRegistry.addAlias("map_route_1", "route_1");
+    mapRegistry.addAlias("oak_lab", "pallet_town_professor_oaks_lab");
+    mapRegistry.addAlias("map_pallet_town_professor_oaks_lab", "pallet_town_professor_oaks_lab");
 
     return mapRegistry;
 }

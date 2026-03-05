@@ -3,6 +3,7 @@
 #include <SDL3/SDL_events.h>
 
 #include <functional>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -19,6 +20,7 @@
 #include "game/state/GameState.h"
 #include "game/systems/GridMovementSystem.h"
 #include "game/ui/DialogueOverlay.h"
+#include "game/ui/PartyMenuOverlay.h"
 #include "game/ui/StartMenuOverlay.h"
 #include "game/world/MapRegistry.h"
 
@@ -48,6 +50,7 @@ public:
 private:
     void createDevConsole();
     bool tryInteractWithNpc();
+    void renderDevConsoleOverlay() const;
     bool triggerWildEncounter(const std::string& tableId);
     void checkEncounterZones(float dt);
     void syncEncounterTrackingToPlayer();
@@ -55,7 +58,7 @@ private:
     void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
     void setDebugConsoleOpen(bool isOpen);
-    void printConsole(const std::string& message) const;
+    void printConsole(const std::string& message);
     Vector2D playerFacingDirection() const;
     bool startTransientScript(OverworldScript script);
     bool consumeScriptAdvanceRequested();
@@ -77,6 +80,7 @@ private:
     float warpCooldownSeconds_ = 0.0f;
     bool debugConsoleOpen_ = false;
     std::string debugConsoleInput_;
+    std::deque<std::string> debugConsoleHistory_;
     bool scriptInputLocked_ = false;
     bool introScriptChecked_ = false;
     bool scriptAdvanceRequested_ = false;
@@ -87,6 +91,7 @@ private:
     std::function<bool(const std::string&, const Vector2D&)> saveGameCallback_;
     std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback_;
     StartMenuOverlay startMenuOverlay_;
+    PartyMenuOverlay partyMenuOverlay_;
 
     Map map_;
     TilemapRenderer tilemapRenderer_;

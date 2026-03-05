@@ -91,7 +91,8 @@
   <object id="37" x="208" y="192" width="112" height="16"/>
   <object id="38" x="352" y="192" width="32" height="16"/>
   <object id="39" x="0" y="208" width="32" height="16"/>
-  <object id="40" x="208" y="208" width="112" height="16"/>
+  <object id="40" x="208" y="208" width="48" height="16"/>
+  <object id="400" x="272" y="208" width="48" height="16"/>
   <object id="41" x="352" y="208" width="32" height="16"/>
   <object id="42" x="0" y="224" width="32" height="16"/>
   <object id="43" x="80" y="224" width="16" height="16"/>
@@ -128,6 +129,8 @@
   <object id="3" x="256" y="208" width="16" height="16">
    <properties>
     <property name="target_map" value="MAP_PALLET_TOWN_PROFESSOR_OAKS_LAB"/>
+    <property name="target_spawn_x" value="96"/>
+    <property name="target_spawn_y" value="176"/>
    </properties>
   </object>
   <object id="4" x="0" y="0" width="384" height="16">

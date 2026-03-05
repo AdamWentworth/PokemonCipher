@@ -37,6 +37,7 @@ bool OverworldScene::runScript(const std::string& scriptId) {
     dialogueOverlay_.hide();
     startMenuOverlay_.close();
     startMenuOverlay_.clearStatusText();
+    partyMenuOverlay_.close();
     scriptAdvanceRequested_ = false;
     setScriptInputEnabled(true);
 

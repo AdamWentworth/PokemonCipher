@@ -366,13 +366,16 @@ def map_constant_slug_candidates(map_constant: str) -> list[str]:
 
 
 def build_connection_warps(
-    map_connections: list[dict],
+    map_connections: list[dict] | None,
     map_width: int,
     map_height: int,
     tile_size: int,
     maps_dir: Path,
 ) -> list[dict]:
     warps: list[dict] = []
+    if not map_connections:
+        return warps
+
     source_mid_x = map_width // 2
     source_mid_y = map_height // 2
 

@@ -98,6 +98,7 @@ Vector2D OverworldScene::playerFacingDirection() const {
 bool OverworldScene::startTransientScript(OverworldScript script) {
     scriptRunner_.stop();
     dialogueOverlay_.hide();
+    partyMenuOverlay_.close();
     scriptAdvanceRequested_ = false;
     setScriptInputEnabled(true);
 

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_render.h>
 
 #include "engine/ecs/Component.h"
 #include "engine/utils/Collision.h"
@@ -143,7 +144,12 @@ void OverworldScene::setScriptInputEnabled(const bool isEnabled) {
 }
 
 void OverworldScene::refreshInputState() {
-    gridMovementSystem_.setInputEnabled(!debugConsoleOpen_ && !scriptInputLocked_ && !startMenuOverlay_.isOpen());
+    gridMovementSystem_.setInputEnabled(
+        !debugConsoleOpen_ &&
+        !scriptInputLocked_ &&
+        !startMenuOverlay_.isOpen() &&
+        !partyMenuOverlay_.isOpen()
+    );
 }
 
 void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
@@ -155,6 +161,7 @@ void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
     if (debugConsoleOpen_) {
         startMenuOverlay_.close();
         startMenuOverlay_.clearStatusText();
+        partyMenuOverlay_.close();
     }
     debugConsoleInput_.clear();
 
@@ -176,8 +183,68 @@ void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
     }
 }
 
-void OverworldScene::printConsole(const std::string& message) const {
+void OverworldScene::printConsole(const std::string& message) {
+    constexpr std::size_t kMaxHistoryLines = 12;
+    debugConsoleHistory_.push_back(message);
+    if (debugConsoleHistory_.size() > kMaxHistoryLines) {
+        debugConsoleHistory_.pop_front();
+    }
+
     std::cout << "[dev] " << message << '\n';
+}
+
+void OverworldScene::renderDevConsoleOverlay() const {
+    if (!debugConsoleOpen_) {
+        return;
+    }
+
+    SDL_Renderer* renderer = textureManager_.renderer();
+    if (!renderer) {
+        return;
+    }
+
+    SDL_FRect overlay{};
+    overlay.x = 6.0f;
+    overlay.y = 6.0f;
+    overlay.w = static_cast<float>(viewportWidth_) - 12.0f;
+    overlay.h = static_cast<float>(viewportHeight_) - 12.0f;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 8, 10, 12, 220);
+    SDL_RenderFillRect(renderer, &overlay);
+    SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
+    SDL_RenderRect(renderer, &overlay);
+
+    SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
+    SDL_RenderDebugText(renderer, overlay.x + 8.0f, overlay.y + 8.0f, "DEV CONSOLE");
+
+    SDL_SetRenderDrawColor(renderer, 180, 200, 220, 255);
+    SDL_RenderDebugText(renderer, overlay.x + 8.0f, overlay.y + 18.0f, "help | maps | warp | runscript | encounter");
+
+    float lineY = overlay.y + 30.0f;
+    const std::size_t visibleHistory = std::min<std::size_t>(8, debugConsoleHistory_.size());
+    const std::size_t historyStart = debugConsoleHistory_.size() - visibleHistory;
+    for (std::size_t i = 0; i < visibleHistory; ++i) {
+        const std::string line = debugConsoleHistory_[historyStart + i];
+        SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
+        SDL_RenderDebugText(renderer, overlay.x + 8.0f, lineY, line.c_str());
+        lineY += 10.0f;
+    }
+
+    SDL_FRect inputBox{};
+    inputBox.x = overlay.x + 6.0f;
+    inputBox.h = 14.0f;
+    inputBox.w = overlay.w - 12.0f;
+    inputBox.y = overlay.y + overlay.h - inputBox.h - 6.0f;
+
+    SDL_SetRenderDrawColor(renderer, 20, 24, 32, 255);
+    SDL_RenderFillRect(renderer, &inputBox);
+    SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
+    SDL_RenderRect(renderer, &inputBox);
+
+    const std::string prompt = "> " + debugConsoleInput_;
+    SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
+    SDL_RenderDebugText(renderer, inputBox.x + 4.0f, inputBox.y + 3.0f, prompt.c_str());
 }
 
 bool OverworldScene::consumeScriptAdvanceRequested() {

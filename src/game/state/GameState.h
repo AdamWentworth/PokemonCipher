@@ -55,6 +55,22 @@ public:
         return party_;
     }
 
+    void setTextSpeedFast(const bool value) {
+        textSpeedFast_ = value;
+    }
+
+    bool isTextSpeedFast() const {
+        return textSpeedFast_;
+    }
+
+    void setBattleStyleSet(const bool value) {
+        battleStyleSet_ = value;
+    }
+
+    bool isBattleStyleSet() const {
+        return battleStyleSet_;
+    }
+
 private:
     static std::string normalize(const std::string& key) {
         std::string normalized;
@@ -68,4 +84,6 @@ private:
     std::unordered_map<std::string, bool> flags_;
     std::unordered_map<std::string, int> vars_;
     std::vector<PartyPokemon> party_;
+    bool textSpeedFast_ = false;
+    bool battleStyleSet_ = false;
 };

@@ -112,6 +112,20 @@ bool SaveGameStorage::loadSlot(const int slotIndex, SaveSlotData& dataOut) const
             continue;
         }
 
+        if (key == "text_speed_fast") {
+            if (!parseBool(value, loaded.textSpeedFast)) {
+                return false;
+            }
+            continue;
+        }
+
+        if (key == "battle_style_set") {
+            if (!parseBool(value, loaded.battleStyleSet)) {
+                return false;
+            }
+            continue;
+        }
+
         if (key.rfind("party_", 0) == 0) {
             std::istringstream parser(value);
             std::string speciesToken;
@@ -165,6 +179,8 @@ bool SaveGameStorage::writeSlot(const int slotIndex, const SaveSlotData& data) c
     file << "intro_complete=" << (data.introComplete ? 1 : 0) << "\n";
     file << "starter_eevee_obtained=" << (data.starterEeveeObtained ? 1 : 0) << "\n";
     file << "story_checkpoint=" << data.storyCheckpoint << "\n";
+    file << "text_speed_fast=" << (data.textSpeedFast ? 1 : 0) << "\n";
+    file << "battle_style_set=" << (data.battleStyleSet ? 1 : 0) << "\n";
     for (std::size_t i = 0; i < data.party.size(); ++i) {
         const PartyPokemon& member = data.party[i];
         file << "party_" << i << "="

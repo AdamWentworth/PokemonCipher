@@ -42,6 +42,8 @@ void applySaveDataToState(GameState& gameState, const SaveSlotData& saveData) {
     gameState.setFlag("intro_complete", saveData.introComplete);
     gameState.setFlag("starter_eevee_obtained", saveData.starterEeveeObtained);
     gameState.setVar("story_checkpoint", saveData.storyCheckpoint);
+    gameState.setTextSpeedFast(saveData.textSpeedFast);
+    gameState.setBattleStyleSet(saveData.battleStyleSet);
     gameState.clearParty();
     for (const PartyPokemon& member : saveData.party) {
         gameState.addPartyPokemon(member.speciesId, member.level, member.isPartner);
@@ -121,6 +123,8 @@ int main(int argc, char** argv) {
                 saveData.introComplete = gameState.getFlag("intro_complete");
                 saveData.starterEeveeObtained = gameState.getFlag("starter_eevee_obtained");
                 saveData.storyCheckpoint = gameState.getVar("story_checkpoint");
+                saveData.textSpeedFast = gameState.isTextSpeedFast();
+                saveData.battleStyleSet = gameState.isBattleStyleSet();
                 saveData.party = gameState.party();
                 return saveStorage.writeSlot(kPrimarySaveSlot, saveData);
             },

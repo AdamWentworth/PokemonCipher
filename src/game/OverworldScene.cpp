@@ -98,8 +98,21 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
                 }
                 return;
             case StartMenuAction::Options:
-                startMenuOverlay_.setStatusText("Options not implemented yet.");
-                printConsole("Start menu: options placeholder.");
+                startMenuOverlay_.openOptions(gameState_.isTextSpeedFast(), gameState_.isBattleStyleSet());
+                startMenuOverlay_.setStatusText("Enter toggles, Back exits options.");
+                printConsole("Start menu: options opened.");
+                return;
+            case StartMenuAction::ToggleTextSpeed:
+                gameState_.setTextSpeedFast(!gameState_.isTextSpeedFast());
+                startMenuOverlay_.syncOptions(gameState_.isTextSpeedFast(), gameState_.isBattleStyleSet());
+                startMenuOverlay_.setStatusText(gameState_.isTextSpeedFast() ? "Text speed set to FAST." : "Text speed set to NORMAL.");
+                printConsole("Start menu: text speed toggled.");
+                return;
+            case StartMenuAction::ToggleBattleStyle:
+                gameState_.setBattleStyleSet(!gameState_.isBattleStyleSet());
+                startMenuOverlay_.syncOptions(gameState_.isTextSpeedFast(), gameState_.isBattleStyleSet());
+                startMenuOverlay_.setStatusText(gameState_.isBattleStyleSet() ? "Battle style set to SET." : "Battle style set to SHIFT.");
+                printConsole("Start menu: battle style toggled.");
                 return;
             case StartMenuAction::None:
                 return;

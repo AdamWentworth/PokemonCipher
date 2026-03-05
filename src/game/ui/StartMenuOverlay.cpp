@@ -7,18 +7,23 @@
 
 namespace {
 constexpr float kPadding = 6.0f;
-constexpr float kMenuWidth = 84.0f;
-constexpr float kMenuHeight = 66.0f;
+constexpr float kMainMenuWidth = 84.0f;
+constexpr float kMainMenuHeight = 66.0f;
+constexpr float kOptionsMenuWidth = 136.0f;
+constexpr float kOptionsMenuHeight = 42.0f;
 constexpr float kLineHeight = 10.0f;
 } // namespace
 
 void StartMenuOverlay::open() {
     open_ = true;
-    selectedIndex_ = std::clamp(selectedIndex_, 0, kEntryCount - 1);
+    optionsOpen_ = false;
+    selectedIndex_ = std::clamp(selectedIndex_, 0, kMainEntryCount - 1);
+    optionsSelectedIndex_ = std::clamp(optionsSelectedIndex_, 0, kOptionsEntryCount - 1);
 }
 
 void StartMenuOverlay::close() {
     open_ = false;
+    optionsOpen_ = false;
 }
 
 StartMenuAction StartMenuOverlay::handleKey(const SDL_Keycode key) {
@@ -26,13 +31,47 @@ StartMenuAction StartMenuOverlay::handleKey(const SDL_Keycode key) {
         return StartMenuAction::None;
     }
 
+    if (optionsOpen_) {
+        if (key == SDLK_UP || key == SDLK_W) {
+            optionsSelectedIndex_ = (optionsSelectedIndex_ + kOptionsEntryCount - 1) % kOptionsEntryCount;
+            return StartMenuAction::None;
+        }
+
+        if (key == SDLK_DOWN || key == SDLK_S) {
+            optionsSelectedIndex_ = (optionsSelectedIndex_ + 1) % kOptionsEntryCount;
+            return StartMenuAction::None;
+        }
+
+        if (key == SDLK_ESCAPE || key == SDLK_X || key == SDLK_BACKSPACE) {
+            optionsOpen_ = false;
+            return StartMenuAction::None;
+        }
+
+        if (key != SDLK_RETURN && key != SDLK_KP_ENTER && key != SDLK_Z && key != SDLK_SPACE) {
+            return StartMenuAction::None;
+        }
+
+        if (optionsSelectedIndex_ == 0) {
+            textSpeedFast_ = !textSpeedFast_;
+            return StartMenuAction::ToggleTextSpeed;
+        }
+
+        if (optionsSelectedIndex_ == 1) {
+            battleStyleSet_ = !battleStyleSet_;
+            return StartMenuAction::ToggleBattleStyle;
+        }
+
+        optionsOpen_ = false;
+        return StartMenuAction::None;
+    }
+
     if (key == SDLK_UP || key == SDLK_W) {
-        selectedIndex_ = (selectedIndex_ + kEntryCount - 1) % kEntryCount;
+        selectedIndex_ = (selectedIndex_ + kMainEntryCount - 1) % kMainEntryCount;
         return StartMenuAction::None;
     }
 
     if (key == SDLK_DOWN || key == SDLK_S) {
-        selectedIndex_ = (selectedIndex_ + 1) % kEntryCount;
+        selectedIndex_ = (selectedIndex_ + 1) % kMainEntryCount;
         return StartMenuAction::None;
     }
 
@@ -66,6 +105,18 @@ void StartMenuOverlay::setStatusText(std::string text) {
     statusText_ = std::move(text);
 }
 
+void StartMenuOverlay::openOptions(const bool textSpeedFast, const bool battleStyleSet) {
+    optionsOpen_ = true;
+    optionsSelectedIndex_ = std::clamp(optionsSelectedIndex_, 0, kOptionsEntryCount - 1);
+    textSpeedFast_ = textSpeedFast;
+    battleStyleSet_ = battleStyleSet;
+}
+
+void StartMenuOverlay::syncOptions(const bool textSpeedFast, const bool battleStyleSet) {
+    textSpeedFast_ = textSpeedFast;
+    battleStyleSet_ = battleStyleSet;
+}
+
 void StartMenuOverlay::clearStatusText() {
     statusText_.clear();
 }
@@ -76,10 +127,10 @@ void StartMenuOverlay::render(SDL_Renderer* renderer, const int viewportWidth, c
     }
 
     SDL_FRect menu{};
-    menu.x = static_cast<float>(viewportWidth) - kMenuWidth - kPadding;
+    menu.x = static_cast<float>(viewportWidth) - (optionsOpen_ ? kOptionsMenuWidth : kMainMenuWidth) - kPadding;
     menu.y = kPadding;
-    menu.w = kMenuWidth;
-    menu.h = kMenuHeight;
+    menu.w = optionsOpen_ ? kOptionsMenuWidth : kMainMenuWidth;
+    menu.h = optionsOpen_ ? kOptionsMenuHeight : kMainMenuHeight;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 20, 24, 32, 232);
@@ -88,15 +139,29 @@ void StartMenuOverlay::render(SDL_Renderer* renderer, const int viewportWidth, c
     SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
     SDL_RenderRect(renderer, &menu);
 
-    for (int i = 0; i < kEntryCount; ++i) {
-        const float y = menu.y + 6.0f + (static_cast<float>(i) * kLineHeight);
-        if (i == selectedIndex_) {
-            SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
-            SDL_RenderDebugText(renderer, menu.x + 4.0f, y, ">");
-            SDL_RenderDebugText(renderer, menu.x + 12.0f, y, entryLabel(i));
-        } else {
-            SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
-            SDL_RenderDebugText(renderer, menu.x + 12.0f, y, entryLabel(i));
+    if (optionsOpen_) {
+        for (int i = 0; i < kOptionsEntryCount; ++i) {
+            const float y = menu.y + 6.0f + (static_cast<float>(i) * kLineHeight);
+            if (i == optionsSelectedIndex_) {
+                SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
+                SDL_RenderDebugText(renderer, menu.x + 4.0f, y, ">");
+                SDL_RenderDebugText(renderer, menu.x + 12.0f, y, optionsEntryLabel(i, textSpeedFast_, battleStyleSet_));
+            } else {
+                SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
+                SDL_RenderDebugText(renderer, menu.x + 12.0f, y, optionsEntryLabel(i, textSpeedFast_, battleStyleSet_));
+            }
+        }
+    } else {
+        for (int i = 0; i < kMainEntryCount; ++i) {
+            const float y = menu.y + 6.0f + (static_cast<float>(i) * kLineHeight);
+            if (i == selectedIndex_) {
+                SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
+                SDL_RenderDebugText(renderer, menu.x + 4.0f, y, ">");
+                SDL_RenderDebugText(renderer, menu.x + 12.0f, y, entryLabel(i));
+            } else {
+                SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
+                SDL_RenderDebugText(renderer, menu.x + 12.0f, y, entryLabel(i));
+            }
         }
     }
 
@@ -130,6 +195,19 @@ const char* StartMenuOverlay::entryLabel(const int index) {
         return "OPTIONS";
     case 4:
         return "EXIT";
+    default:
+        return "";
+    }
+}
+
+const char* StartMenuOverlay::optionsEntryLabel(const int index, const bool textSpeedFast, const bool battleStyleSet) {
+    switch (index) {
+    case 0:
+        return textSpeedFast ? "TEXT: FAST" : "TEXT: NORMAL";
+    case 1:
+        return battleStyleSet ? "BATTLE: SET" : "BATTLE: SHIFT";
+    case 2:
+        return "BACK";
     default:
         return "";
     }

@@ -12,6 +12,8 @@ struct SaveSlotData {
     bool introComplete = false;
     bool starterEeveeObtained = false;
     int storyCheckpoint = 0;
+    bool textSpeedFast = false;
+    bool battleStyleSet = false;
     std::vector<PartyPokemon> party;
 };
 

@@ -1,0 +1,38 @@
+<animations>
+    <walk_down>
+        <frame x="48" y="0" w="16" h="32" />
+        <frame x="0" y="0" w="16" h="32" />
+        <frame x="64" y="0" w="16" h="32" />
+        <frame x="0" y="0" w="16" h="32" />
+    </walk_down>
+    <walk_up>
+        <frame x="80" y="0" w="16" h="32" />
+        <frame x="16" y="0" w="16" h="32" />
+        <frame x="96" y="0" w="16" h="32" />
+        <frame x="16" y="0" w="16" h="32" />
+    </walk_up>
+    <walk_left>
+        <frame x="112" y="0" w="16" h="32" />
+        <frame x="32" y="0" w="16" h="32" />
+        <frame x="128" y="0" w="16" h="32" />
+        <frame x="32" y="0" w="16" h="32" />
+    </walk_left>
+    <walk_right>
+        <frame x="112" y="0" w="16" h="32" />
+        <frame x="32" y="0" w="16" h="32" />
+        <frame x="128" y="0" w="16" h="32" />
+        <frame x="32" y="0" w="16" h="32" />
+    </walk_right>
+    <idle_down>
+        <frame x="0" y="0" w="16" h="32" />
+    </idle_down>
+    <idle_up>
+        <frame x="16" y="0" w="16" h="32" />
+    </idle_up>
+    <idle_left>
+        <frame x="32" y="0" w="16" h="32" />
+    </idle_left>
+    <idle_right>
+        <frame x="32" y="0" w="16" h="32" />
+    </idle_right>
+</animations>

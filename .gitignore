@@ -1,0 +1,17 @@
+build/
+.agents/
+
+# IDE / local editor state
+.vs/
+.vscode/
+*.user
+
+# CMake local artifacts (outside build/ if generated)
+CMakeUserPresets.json
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+
+# Python cache for tooling scripts
+__pycache__/
+*.pyc

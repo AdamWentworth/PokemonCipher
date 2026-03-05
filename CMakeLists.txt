@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 3.22)
+project(PokemonCipher LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(SDL3 CONFIG REQUIRED)
+find_package(SDL3_image CONFIG REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
+
+add_executable(PokemonCipher
+  src/main.cpp
+  src/engine/Game.cpp
+  src/engine/TextureManager.cpp
+  src/engine/Map.cpp
+  src/engine/TilemapRenderer.cpp
+
+  src/game/OverworldScene.cpp
+
+  src/engine/manager/AssetManager.cpp
+
+  src/engine/utils/Vector2D.cpp
+  src/engine/utils/Collision.cpp
+
+  src/engine/ecs/World.cpp
+  src/engine/ecs/systems/CollisionSystem.cpp
+)
+
+target_include_directories(PokemonCipher PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(PokemonCipher PRIVATE
+  SDL3::SDL3
+  $<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static>
+  tinyxml2::tinyxml2
+)
+
+set(ASSETS_SRC "${CMAKE_SOURCE_DIR}/assets")
+add_custom_command(TARGET PokemonCipher POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${ASSETS_SRC}"
+          "$<TARGET_FILE_DIR:PokemonCipher>/assets"
+)
+
+if (MSVC)
+  set_target_properties(PokemonCipher PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:PokemonCipher>"
+  )
+endif()
+
+if (WIN32)
+  set_target_properties(PokemonCipher PROPERTIES
+    WIN32_EXECUTABLE OFF
+  )
+endif()

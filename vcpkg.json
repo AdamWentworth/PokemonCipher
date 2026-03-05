@@ -1,0 +1,12 @@
+{
+  "name": "pokemoncipher",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "sdl3",
+    {
+      "name": "sdl3-image",
+      "features": [ "png" ]
+    },
+    "tinyxml2"
+  ]
+}

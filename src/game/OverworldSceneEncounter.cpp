@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <sstream>
 #include <string>
 
 #include "engine/ecs/Component.h"
@@ -32,6 +33,33 @@ bool isInEncounterZone(const SDL_FRect& playerCollider, const Map& map, std::str
     return false;
 }
 } // namespace
+
+bool OverworldScene::triggerWildEncounter(const std::string& tableId) {
+    const auto wildEncounter = wildEncounterService_.rollEncounter(tableId, encounterRng());
+    if (!wildEncounter.has_value()) {
+        printConsole("Encounter table has no entries: " + tableId);
+        return false;
+    }
+
+    gameState_.setVar("pending_wild_species_id", wildEncounter->speciesId);
+    gameState_.setVar("pending_wild_level", wildEncounter->level);
+    gameState_.setVar("wild_encounter_count", gameState_.getVar("wild_encounter_count") + 1);
+
+    std::ostringstream encounterText;
+    encounterText << "A wild " << wildEncounter->speciesName << " Lv" << wildEncounter->level << " appeared!";
+
+    OverworldScript script{};
+    script.id = "__wild_encounter";
+    script.commands.push_back(OverworldScriptCommand::LockInput());
+    script.commands.push_back(OverworldScriptCommand::Log(
+        "Wild encounter: table=" + wildEncounter->tableId +
+        " species=" + std::to_string(wildEncounter->speciesId) +
+        " level=" + std::to_string(wildEncounter->level)));
+    script.commands.push_back(OverworldScriptCommand::Dialogue("System", encounterText.str()));
+    script.commands.push_back(OverworldScriptCommand::UnlockInput());
+
+    return startTransientScript(std::move(script));
+}
 
 void OverworldScene::syncEncounterTrackingToPlayer() {
     const Entity* player = world_.findFirstWith<PlayerTag>();
@@ -95,14 +123,7 @@ void OverworldScene::checkEncounterZones(const float dt) {
         return;
     }
 
-    OverworldScript script{};
-    script.id = "__wild_encounter";
-    script.commands.push_back(OverworldScriptCommand::LockInput());
-    script.commands.push_back(OverworldScriptCommand::Log("Wild encounter table: " + tableId));
-    script.commands.push_back(OverworldScriptCommand::Dialogue("System", "A wild Pokemon appeared!"));
-    script.commands.push_back(OverworldScriptCommand::UnlockInput());
-
-    if (startTransientScript(std::move(script))) {
+    if (triggerWildEncounter(tableId)) {
         encounterCooldownSeconds_ = kEncounterCooldownOnTriggerSeconds;
     }
 }

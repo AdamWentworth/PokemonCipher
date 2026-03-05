@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "game/dev/OverworldDevConsole.h"
+#include "game/encounters/WildEncounterService.h"
 #include "engine/Map.h"
 #include "engine/TextureManager.h"
 #include "engine/TilemapRenderer.h"
@@ -46,6 +47,7 @@ public:
 private:
     void createDevConsole();
     bool tryInteractWithNpc();
+    bool triggerWildEncounter(const std::string& tableId);
     void checkEncounterZones(float dt);
     void syncEncounterTrackingToPlayer();
     void registerDefaultScripts();
@@ -89,6 +91,7 @@ private:
     DialogueOverlay dialogueOverlay_;
     World world_;
     GridMovementSystem gridMovementSystem_;
+    WildEncounterService wildEncounterService_;
     std::unique_ptr<OverworldDevConsole> devConsole_;
     OverworldScript transientScript_;
     std::unordered_map<std::string, OverworldScript> scripts_;

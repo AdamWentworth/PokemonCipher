@@ -25,11 +25,13 @@ add_executable(PokemonCipher
   src/game/OverworldSceneEncounter.cpp
   src/game/TitleScene.cpp
   src/game/dev/OverworldDevConsole.cpp
+  src/game/dev/OverworldDevConsoleEncounterHandlers.cpp
   src/game/dev/OverworldDevConsoleParsing.cpp
   src/game/dev/OverworldDevConsoleInfoHandlers.cpp
   src/game/dev/OverworldDevConsoleScriptHandlers.cpp
   src/game/dev/OverworldDevConsoleTravelHandlers.cpp
   src/game/dev/OverworldDevConsoleStateHandlers.cpp
+  src/game/encounters/WildEncounterService.cpp
   src/game/scripting/LuaOverworldScriptLoader.cpp
   src/game/save/SaveGameStorage.cpp
   src/game/ui/DialogueOverlay.cpp

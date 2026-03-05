@@ -23,7 +23,9 @@ public:
         std::function<std::vector<std::string>()> listMapIds;
         std::function<std::string()> currentMapId;
         std::function<std::vector<std::string>()> listScriptIds;
+        std::function<std::vector<std::string>()> listEncounterTableIds;
         std::function<bool(const std::string&)> runScript;
+        std::function<bool(const std::string&)> triggerEncounter;
         std::function<bool()> stopScript;
         std::function<bool(const std::string&, const std::string&)> warpToSpawn;
         std::function<bool(const std::string&, const Vector2D&)> warpToPoint;

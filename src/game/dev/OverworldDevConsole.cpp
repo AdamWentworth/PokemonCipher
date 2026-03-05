@@ -27,6 +27,10 @@ void OverworldDevConsole::execute(const std::string& commandLine) const {
         return;
     }
 
+    if (OverworldDevConsoleHandlers::handleEncounterCommand(command, tokens, dependencies_)) {
+        return;
+    }
+
     if (OverworldDevConsoleHandlers::handleTravelCommand(command, tokens, dependencies_)) {
         return;
     }

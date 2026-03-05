@@ -18,6 +18,12 @@ bool handleScriptCommand(
     const OverworldDevConsole::Dependencies& dependencies
 );
 
+bool handleEncounterCommand(
+    const std::string& command,
+    const std::vector<std::string>& tokens,
+    const OverworldDevConsole::Dependencies& dependencies
+);
+
 bool handleTravelCommand(
     const std::string& command,
     const std::vector<std::string>& tokens,

@@ -9,6 +9,7 @@
 #include <SDL3/SDL_keyboard.h>
 
 #include "engine/ecs/Component.h"
+#include "engine/utils/Collision.h"
 
 void OverworldScene::createDevConsole() {
     OverworldDevConsole::Dependencies dependencies{};
@@ -29,8 +30,31 @@ void OverworldScene::createDevConsole() {
         }
         return scriptIds;
     };
+    dependencies.listEncounterTableIds = [this]() {
+        return wildEncounterService_.tableIds();
+    };
     dependencies.runScript = [this](const std::string& scriptId) {
         return runScript(scriptId);
+    };
+    dependencies.triggerEncounter = [this](const std::string& tableId) {
+        if (tableId.empty()) {
+            const Entity* player = world_.findFirstWith<PlayerTag>();
+            if (!player || !player->hasComponent<Collider>()) {
+                return false;
+            }
+
+            for (const EncounterZone& zone : map_.encounterZones) {
+                if (!Collision::AABB(player->getComponent<Collider>().rect, zone.area)) {
+                    continue;
+                }
+
+                return triggerWildEncounter(zone.tableId.empty() ? "default_grass" : zone.tableId);
+            }
+
+            return false;
+        }
+
+        return triggerWildEncounter(tableId);
     };
     dependencies.stopScript = [this]() {
         if (!scriptRunner_.isRunning()) {

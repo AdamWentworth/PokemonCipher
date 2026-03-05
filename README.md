@@ -26,6 +26,14 @@ Pokemon-style overworld prototype in C++20 using SDL3.
 - `goto <tx> <ty>` and `teleport <x> <y>` to reposition on current map
 - `setflag/getflag` and `setvar/getvar` for script/game-state testing
 
+## Lua Script Files
+
+- `runscript <id>` loads `assets/scripts/<id>.lua`
+- Scripts must `return` an array of command arrays
+- Supported ops:
+  `log`, `wait`, `lock_input`, `unlock_input`, `set_flag`, `set_var`, `warp_spawn`, `warp_xy`, `teleport`
+- Example: see `assets/scripts/dev_bootstrap_pallet.lua`
+
 ## Build
 
 1. Configure: `cmake --preset vs2026`

@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
+find_package(Lua REQUIRED)
 
 add_executable(PokemonCipher
   src/main.cpp
@@ -17,6 +18,7 @@ add_executable(PokemonCipher
   src/engine/TilemapRenderer.cpp
 
   src/game/OverworldScene.cpp
+  src/game/scripting/LuaOverworldScriptLoader.cpp
 
   src/engine/manager/AssetManager.cpp
 
@@ -36,6 +38,13 @@ target_link_libraries(PokemonCipher PRIVATE
   $<IF:$<TARGET_EXISTS:SDL3_image::SDL3_image-shared>,SDL3_image::SDL3_image-shared,SDL3_image::SDL3_image-static>
   tinyxml2::tinyxml2
 )
+
+if (TARGET Lua::Lua)
+  target_link_libraries(PokemonCipher PRIVATE Lua::Lua)
+else()
+  target_include_directories(PokemonCipher PRIVATE ${LUA_INCLUDE_DIR})
+  target_link_libraries(PokemonCipher PRIVATE ${LUA_LIBRARIES})
+endif()
 
 set(ASSETS_SRC "${CMAKE_SOURCE_DIR}/assets")
 add_custom_command(TARGET PokemonCipher POST_BUILD

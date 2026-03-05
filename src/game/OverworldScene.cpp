@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include <SDL3/SDL_keyboard.h>
@@ -12,6 +14,7 @@
 #include "engine/ecs/Component.h"
 #include "engine/manager/AssetManager.h"
 #include "engine/utils/Collision.h"
+#include "game/scripting/LuaOverworldScriptLoader.h"
 
 namespace {
 std::vector<std::string> splitTokens(const std::string& input) {
@@ -24,6 +27,31 @@ std::vector<std::string> splitTokens(const std::string& input) {
     }
 
     return tokens;
+}
+
+std::vector<std::string> listLuaScriptIds() {
+    std::vector<std::string> scriptIds;
+    const std::filesystem::path scriptsDirectory = std::filesystem::path("assets") / "scripts";
+    if (!std::filesystem::exists(scriptsDirectory) || !std::filesystem::is_directory(scriptsDirectory)) {
+        return scriptIds;
+    }
+
+    for (const auto& entry : std::filesystem::directory_iterator(scriptsDirectory)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+
+        const std::filesystem::path path = entry.path();
+        if (path.extension() != ".lua") {
+            continue;
+        }
+
+        scriptIds.push_back(path.stem().string());
+    }
+
+    std::sort(scriptIds.begin(), scriptIds.end());
+    scriptIds.erase(std::unique(scriptIds.begin(), scriptIds.end()), scriptIds.end());
+    return scriptIds;
 }
 } // namespace
 
@@ -176,6 +204,21 @@ bool OverworldScene::teleportPlayer(const Vector2D& pixelPosition) {
 
 bool OverworldScene::runScript(const std::string& scriptId) {
     const std::string scriptKey = normalizeMapKey(scriptId);
+    const std::filesystem::path luaScriptPath = std::filesystem::path("assets") / "scripts" / (scriptKey + ".lua");
+
+    if (std::filesystem::exists(luaScriptPath)) {
+        OverworldScript loadedScript{};
+        std::string loadError;
+        if (!loadOverworldScriptFromLuaFile(scriptKey, luaScriptPath.string(), loadedScript, loadError)) {
+            printConsole("Lua load error for '" + scriptKey + "': " + loadError);
+            return false;
+        }
+
+        scripts_[scriptKey] = std::move(loadedScript);
+    } else if (scripts_.find(scriptKey) == scripts_.end()) {
+        return false;
+    }
+
     const auto it = scripts_.find(scriptKey);
     if (it == scripts_.end()) {
         return false;
@@ -277,20 +320,6 @@ std::string OverworldScene::normalizeMapKey(std::string key) {
 
 void OverworldScene::registerDefaultScripts() {
     scripts_.clear();
-
-    OverworldScript bootstrapPalletScript{};
-    bootstrapPalletScript.id = "dev_bootstrap_pallet";
-    bootstrapPalletScript.commands = {
-        OverworldScriptCommand::LockInput(),
-        OverworldScriptCommand::Log("Bootstrapping Pallet Town test state."),
-        OverworldScriptCommand::WarpToSpawn("pallet_town", "default"),
-        OverworldScriptCommand::SetFlag("intro_complete", true),
-        OverworldScriptCommand::SetVar("story_checkpoint", 1),
-        OverworldScriptCommand::Wait(0.2f),
-        OverworldScriptCommand::UnlockInput()
-    };
-
-    scripts_.emplace(normalizeMapKey(bootstrapPalletScript.id), bootstrapPalletScript);
 }
 
 void OverworldScene::setScriptInputEnabled(const bool isEnabled) {
@@ -362,17 +391,18 @@ void OverworldScene::executeConsoleCommand(const std::string& commandLine) {
     }
 
     if (command == "scripts") {
-        if (scripts_.empty()) {
-            printConsole("No scripts registered.");
-            return;
-        }
-
-        std::vector<std::string> scriptIds;
-        scriptIds.reserve(scripts_.size());
+        std::vector<std::string> scriptIds = listLuaScriptIds();
         for (const auto& [_, script] : scripts_) {
             scriptIds.push_back(script.id);
         }
+
         std::sort(scriptIds.begin(), scriptIds.end());
+        scriptIds.erase(std::unique(scriptIds.begin(), scriptIds.end()), scriptIds.end());
+
+        if (scriptIds.empty()) {
+            printConsole("No scripts registered.");
+            return;
+        }
 
         std::string line = "Scripts:";
         for (const std::string& scriptId : scriptIds) {

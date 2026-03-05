@@ -260,6 +260,32 @@ def merge_collision_runs(blocked_grid: list[bool], width: int, height: int, tile
     return rectangles
 
 
+def render_layer_from_atlas(
+    atlas_image: Image.Image,
+    layer_values: list[int],
+    map_width: int,
+    map_height: int,
+    tile_size: int,
+) -> Image.Image:
+    rendered = Image.new("RGBA", (map_width * tile_size, map_height * tile_size), (0, 0, 0, 0))
+    atlas_columns = atlas_image.width // tile_size
+
+    for index, gid in enumerate(layer_values):
+        if gid <= 0:
+            continue
+
+        tile_id = gid - 1
+        src_x = (tile_id % atlas_columns) * tile_size
+        src_y = (tile_id // atlas_columns) * tile_size
+        tile = atlas_image.crop((src_x, src_y, src_x + tile_size, src_y + tile_size))
+
+        dst_x = (index % map_width) * tile_size
+        dst_y = (index // map_width) * tile_size
+        rendered.paste(tile, (dst_x, dst_y), tile)
+
+    return rendered
+
+
 def write_tmx(
     tmx_path: Path,
     map_width: int,
@@ -525,6 +551,7 @@ def main() -> None:
 
     spawn_x = 6 * tile_size
     spawn_y = 9 * tile_size
+    ground_layer_values = [metatile_id + 1 for metatile_id in metatile_ids]
 
     write_tmx(
         maps_dir / "pallet_town.tmx",
@@ -534,13 +561,20 @@ def main() -> None:
         "../tilesets/pallet_town_metatiles.png",
         atlas_columns,
         atlas_tile_count,
-        [metatile_id + 1 for metatile_id in metatile_ids],
+        ground_layer_values,
         cover_layer_values,
         collision_rects,
         spawn_x,
         spawn_y,
         warp_events,
     )
+
+    map_ground_image = render_layer_from_atlas(base_atlas, ground_layer_values, map_width, map_height, tile_size)
+    map_cover_image = render_layer_from_atlas(cover_atlas, cover_layer_values, map_width, map_height, tile_size)
+    map_composite_image = map_ground_image.copy()
+    map_composite_image.alpha_composite(map_cover_image)
+    map_composite_output = maps_dir / "pallet_town_composite.png"
+    map_composite_image.save(map_composite_output)
 
     colorize_object_sprite(
         firered_root / "graphics" / "object_events" / "pics" / "people" / "red_normal.png",
@@ -554,6 +588,7 @@ def main() -> None:
     print(f"- {maps_dir / 'pallet_town.tmx'}")
     print(f"- {tileset_output}")
     print(f"- {cover_tileset_output}")
+    print(f"- {map_composite_output}")
     print(f"- {characters_dir / 'red_normal.png'}")
     print(f"- {animations_dir / 'red_overworld.xml'}")
 

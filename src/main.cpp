@@ -33,8 +33,8 @@ int main(int argc, char** argv) {
     MapDefinition palletTown{};
     palletTown.id = "pallet_town";
     palletTown.mapPath = "assets/maps/pallet_town.tmx";
-    palletTown.baseTilesetPath = "assets/tilesets/pallet_town_metatiles.png";
-    palletTown.coverTilesetPath = "assets/tilesets/pallet_town_cover_metatiles.png";
+    palletTown.baseTilesetPath = "assets/tilesets/pallet_town_metatiles_organized.png";
+    palletTown.coverTilesetPath = "";
     mapRegistry.addMap(palletTown);
 
     mapRegistry.addAlias("map_pallet_town", "pallet_town");

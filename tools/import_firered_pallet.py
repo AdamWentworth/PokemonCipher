@@ -38,6 +38,8 @@ WATER_BEHAVIOR_IDS = {
     0x1B,  # MB_CYCLING_ROAD_WATER
 }
 
+ORGANIZED_ATLAS_COLUMNS = 16
+
 
 def to_snake_case(symbol_name: str) -> str:
     chars = []
@@ -260,6 +262,38 @@ def merge_collision_runs(blocked_grid: list[bool], width: int, height: int, tile
     return rectangles
 
 
+def build_organized_metatile_mapping(metatile_ids: list[int]) -> tuple[list[int], dict[int, int], dict[int, int]]:
+    ordered_ids = sorted(set(metatile_ids))
+    base_gid_by_metatile_id = {old_id: index + 1 for index, old_id in enumerate(ordered_ids)}
+    cover_gid_start = len(ordered_ids) + 1
+    cover_gid_by_metatile_id = {
+        old_id: cover_gid_start + index
+        for index, old_id in enumerate(ordered_ids)
+    }
+    return ordered_ids, base_gid_by_metatile_id, cover_gid_by_metatile_id
+
+
+def write_metatile_mapping_json(
+    path: Path,
+    ordered_ids: list[int],
+    base_gid_by_metatile_id: dict[int, int],
+    cover_gid_by_metatile_id: dict[int, int],
+) -> None:
+    payload = {
+        "layout": "LAYOUT_PALLET_TOWN",
+        "columns": ORGANIZED_ATLAS_COLUMNS,
+        "entries": [
+            {
+                "source_metatile_id": source_id,
+                "base_gid": base_gid_by_metatile_id[source_id],
+                "cover_gid": cover_gid_by_metatile_id[source_id],
+            }
+            for source_id in ordered_ids
+        ],
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
 def render_layer_from_atlas(
     atlas_image: Image.Image,
     layer_values: list[int],
@@ -472,17 +506,16 @@ def main() -> None:
     map_values = read_map_grid(firered_root / "data" / "layouts" / "PalletTown" / "map.bin", map_width, map_height)
 
     metatile_ids = [value & MAPGRID_METATILE_ID_MASK for value in map_values]
+    ordered_metatile_ids, base_gid_by_metatile_id, cover_gid_by_metatile_id = build_organized_metatile_mapping(metatile_ids)
     collision_bits = [(value & MAPGRID_COLLISION_MASK) >> MAPGRID_COLLISION_SHIFT for value in map_values]
-    max_metatile_id = max(metatile_ids)
-    atlas_columns = 32
-    atlas_tile_count = max_metatile_id + 1
+    atlas_columns = ORGANIZED_ATLAS_COLUMNS
+    atlas_tile_count = len(ordered_metatile_ids) * 2
     atlas_rows = math.ceil(atlas_tile_count / atlas_columns)
-    base_atlas = Image.new("RGBA", (atlas_columns * tile_size, atlas_rows * tile_size), (0, 0, 0, 0))
-    cover_atlas = Image.new("RGBA", (atlas_columns * tile_size, atlas_rows * tile_size), (0, 0, 0, 0))
+    organized_atlas = Image.new("RGBA", (atlas_columns * tile_size, atlas_rows * tile_size), (0, 0, 0, 0))
     cover_layer_values = [0] * len(metatile_ids)
     blocked_tiles = [False] * len(metatile_ids)
 
-    for metatile_id in range(atlas_tile_count):
+    for metatile_id in ordered_metatile_ids:
         entry = get_metatile_entry(metatile_id, primary_metatiles, secondary_metatiles)
         attributes = get_metatile_attributes(metatile_id, primary_attributes, secondary_attributes)
         layer_type = (attributes & METATILE_ATTRIBUTE_LAYER_TYPE_MASK) >> METATILE_ATTRIBUTE_LAYER_TYPE_SHIFT
@@ -512,10 +545,15 @@ def main() -> None:
                 draw_top_layer=draw_top_in_cover,
             )
 
-        dst_x = (metatile_id % atlas_columns) * tile_size
-        dst_y = (metatile_id // atlas_columns) * tile_size
-        base_atlas.paste(base_rendered, (dst_x, dst_y), base_rendered)
-        cover_atlas.paste(cover_rendered, (dst_x, dst_y), cover_rendered)
+        base_tile_index = base_gid_by_metatile_id[metatile_id] - 1
+        base_dst_x = (base_tile_index % atlas_columns) * tile_size
+        base_dst_y = (base_tile_index // atlas_columns) * tile_size
+        organized_atlas.paste(base_rendered, (base_dst_x, base_dst_y), base_rendered)
+
+        cover_tile_index = cover_gid_by_metatile_id[metatile_id] - 1
+        cover_dst_x = (cover_tile_index % atlas_columns) * tile_size
+        cover_dst_y = (cover_tile_index // atlas_columns) * tile_size
+        organized_atlas.paste(cover_rendered, (cover_dst_x, cover_dst_y), cover_rendered)
 
     for index, metatile_id in enumerate(metatile_ids):
         attributes = get_metatile_attributes(metatile_id, primary_attributes, secondary_attributes)
@@ -528,7 +566,7 @@ def main() -> None:
         blocked_tiles[index] = is_map_collision_blocked or is_water_blocked
 
         if layer_type in (METATILE_LAYER_TYPE_NORMAL, METATILE_LAYER_TYPE_SPLIT):
-            cover_layer_values[index] = metatile_id + 1
+            cover_layer_values[index] = cover_gid_by_metatile_id[metatile_id]
 
     assets_dir = project_root / "assets"
     maps_dir = assets_dir / "maps"
@@ -539,10 +577,15 @@ def main() -> None:
     maps_dir.mkdir(parents=True, exist_ok=True)
     tilesets_dir.mkdir(parents=True, exist_ok=True)
 
-    tileset_output = tilesets_dir / "pallet_town_metatiles.png"
-    cover_tileset_output = tilesets_dir / "pallet_town_cover_metatiles.png"
-    base_atlas.save(tileset_output)
-    cover_atlas.save(cover_tileset_output)
+    tileset_output = tilesets_dir / "pallet_town_metatiles_organized.png"
+    metatile_index_output = maps_dir / "pallet_town_metatile_index.json"
+    organized_atlas.save(tileset_output)
+    write_metatile_mapping_json(
+        metatile_index_output,
+        ordered_metatile_ids,
+        base_gid_by_metatile_id,
+        cover_gid_by_metatile_id,
+    )
 
     map_json = json.loads((firered_root / "data" / "maps" / "PalletTown" / "map.json").read_text(encoding="utf-8"))
     warp_events = map_json.get("warp_events", [])
@@ -551,14 +594,14 @@ def main() -> None:
 
     spawn_x = 6 * tile_size
     spawn_y = 9 * tile_size
-    ground_layer_values = [metatile_id + 1 for metatile_id in metatile_ids]
+    ground_layer_values = [base_gid_by_metatile_id[metatile_id] for metatile_id in metatile_ids]
 
     write_tmx(
         maps_dir / "pallet_town.tmx",
         map_width,
         map_height,
         tile_size,
-        "../tilesets/pallet_town_metatiles.png",
+        "../tilesets/pallet_town_metatiles_organized.png",
         atlas_columns,
         atlas_tile_count,
         ground_layer_values,
@@ -569,8 +612,8 @@ def main() -> None:
         warp_events,
     )
 
-    map_ground_image = render_layer_from_atlas(base_atlas, ground_layer_values, map_width, map_height, tile_size)
-    map_cover_image = render_layer_from_atlas(cover_atlas, cover_layer_values, map_width, map_height, tile_size)
+    map_ground_image = render_layer_from_atlas(organized_atlas, ground_layer_values, map_width, map_height, tile_size)
+    map_cover_image = render_layer_from_atlas(organized_atlas, cover_layer_values, map_width, map_height, tile_size)
     map_composite_image = map_ground_image.copy()
     map_composite_image.alpha_composite(map_cover_image)
     map_composite_output = maps_dir / "pallet_town_composite.png"
@@ -587,7 +630,7 @@ def main() -> None:
     print("Imported FireRed Pallet Town assets:")
     print(f"- {maps_dir / 'pallet_town.tmx'}")
     print(f"- {tileset_output}")
-    print(f"- {cover_tileset_output}")
+    print(f"- {metatile_index_output}")
     print(f"- {map_composite_output}")
     print(f"- {characters_dir / 'red_normal.png'}")
     print(f"- {animations_dir / 'red_overworld.xml'}")

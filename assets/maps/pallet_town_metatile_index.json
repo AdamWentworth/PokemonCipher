@@ -1,0 +1,496 @@
+{
+  "layout": "LAYOUT_PALLET_TOWN",
+  "columns": 16,
+  "entries": [
+    {
+      "source_metatile_id": 2,
+      "base_gid": 1,
+      "cover_gid": 99
+    },
+    {
+      "source_metatile_id": 3,
+      "base_gid": 2,
+      "cover_gid": 100
+    },
+    {
+      "source_metatile_id": 4,
+      "base_gid": 3,
+      "cover_gid": 101
+    },
+    {
+      "source_metatile_id": 8,
+      "base_gid": 4,
+      "cover_gid": 102
+    },
+    {
+      "source_metatile_id": 9,
+      "base_gid": 5,
+      "cover_gid": 103
+    },
+    {
+      "source_metatile_id": 14,
+      "base_gid": 6,
+      "cover_gid": 104
+    },
+    {
+      "source_metatile_id": 15,
+      "base_gid": 7,
+      "cover_gid": 105
+    },
+    {
+      "source_metatile_id": 17,
+      "base_gid": 8,
+      "cover_gid": 106
+    },
+    {
+      "source_metatile_id": 20,
+      "base_gid": 9,
+      "cover_gid": 107
+    },
+    {
+      "source_metatile_id": 21,
+      "base_gid": 10,
+      "cover_gid": 108
+    },
+    {
+      "source_metatile_id": 22,
+      "base_gid": 11,
+      "cover_gid": 109
+    },
+    {
+      "source_metatile_id": 23,
+      "base_gid": 12,
+      "cover_gid": 110
+    },
+    {
+      "source_metatile_id": 28,
+      "base_gid": 13,
+      "cover_gid": 111
+    },
+    {
+      "source_metatile_id": 29,
+      "base_gid": 14,
+      "cover_gid": 112
+    },
+    {
+      "source_metatile_id": 30,
+      "base_gid": 15,
+      "cover_gid": 113
+    },
+    {
+      "source_metatile_id": 31,
+      "base_gid": 16,
+      "cover_gid": 114
+    },
+    {
+      "source_metatile_id": 36,
+      "base_gid": 17,
+      "cover_gid": 115
+    },
+    {
+      "source_metatile_id": 37,
+      "base_gid": 18,
+      "cover_gid": 116
+    },
+    {
+      "source_metatile_id": 38,
+      "base_gid": 19,
+      "cover_gid": 117
+    },
+    {
+      "source_metatile_id": 39,
+      "base_gid": 20,
+      "cover_gid": 118
+    },
+    {
+      "source_metatile_id": 291,
+      "base_gid": 21,
+      "cover_gid": 119
+    },
+    {
+      "source_metatile_id": 298,
+      "base_gid": 22,
+      "cover_gid": 120
+    },
+    {
+      "source_metatile_id": 299,
+      "base_gid": 23,
+      "cover_gid": 121
+    },
+    {
+      "source_metatile_id": 300,
+      "base_gid": 24,
+      "cover_gid": 122
+    },
+    {
+      "source_metatile_id": 641,
+      "base_gid": 25,
+      "cover_gid": 123
+    },
+    {
+      "source_metatile_id": 642,
+      "base_gid": 26,
+      "cover_gid": 124
+    },
+    {
+      "source_metatile_id": 643,
+      "base_gid": 27,
+      "cover_gid": 125
+    },
+    {
+      "source_metatile_id": 644,
+      "base_gid": 28,
+      "cover_gid": 126
+    },
+    {
+      "source_metatile_id": 645,
+      "base_gid": 29,
+      "cover_gid": 127
+    },
+    {
+      "source_metatile_id": 646,
+      "base_gid": 30,
+      "cover_gid": 128
+    },
+    {
+      "source_metatile_id": 647,
+      "base_gid": 31,
+      "cover_gid": 129
+    },
+    {
+      "source_metatile_id": 648,
+      "base_gid": 32,
+      "cover_gid": 130
+    },
+    {
+      "source_metatile_id": 649,
+      "base_gid": 33,
+      "cover_gid": 131
+    },
+    {
+      "source_metatile_id": 650,
+      "base_gid": 34,
+      "cover_gid": 132
+    },
+    {
+      "source_metatile_id": 651,
+      "base_gid": 35,
+      "cover_gid": 133
+    },
+    {
+      "source_metatile_id": 652,
+      "base_gid": 36,
+      "cover_gid": 134
+    },
+    {
+      "source_metatile_id": 654,
+      "base_gid": 37,
+      "cover_gid": 135
+    },
+    {
+      "source_metatile_id": 655,
+      "base_gid": 38,
+      "cover_gid": 136
+    },
+    {
+      "source_metatile_id": 656,
+      "base_gid": 39,
+      "cover_gid": 137
+    },
+    {
+      "source_metatile_id": 657,
+      "base_gid": 40,
+      "cover_gid": 138
+    },
+    {
+      "source_metatile_id": 658,
+      "base_gid": 41,
+      "cover_gid": 139
+    },
+    {
+      "source_metatile_id": 659,
+      "base_gid": 42,
+      "cover_gid": 140
+    },
+    {
+      "source_metatile_id": 660,
+      "base_gid": 43,
+      "cover_gid": 141
+    },
+    {
+      "source_metatile_id": 661,
+      "base_gid": 44,
+      "cover_gid": 142
+    },
+    {
+      "source_metatile_id": 662,
+      "base_gid": 45,
+      "cover_gid": 143
+    },
+    {
+      "source_metatile_id": 663,
+      "base_gid": 46,
+      "cover_gid": 144
+    },
+    {
+      "source_metatile_id": 664,
+      "base_gid": 47,
+      "cover_gid": 145
+    },
+    {
+      "source_metatile_id": 665,
+      "base_gid": 48,
+      "cover_gid": 146
+    },
+    {
+      "source_metatile_id": 666,
+      "base_gid": 49,
+      "cover_gid": 147
+    },
+    {
+      "source_metatile_id": 667,
+      "base_gid": 50,
+      "cover_gid": 148
+    },
+    {
+      "source_metatile_id": 668,
+      "base_gid": 51,
+      "cover_gid": 149
+    },
+    {
+      "source_metatile_id": 670,
+      "base_gid": 52,
+      "cover_gid": 150
+    },
+    {
+      "source_metatile_id": 671,
+      "base_gid": 53,
+      "cover_gid": 151
+    },
+    {
+      "source_metatile_id": 672,
+      "base_gid": 54,
+      "cover_gid": 152
+    },
+    {
+      "source_metatile_id": 673,
+      "base_gid": 55,
+      "cover_gid": 153
+    },
+    {
+      "source_metatile_id": 674,
+      "base_gid": 56,
+      "cover_gid": 154
+    },
+    {
+      "source_metatile_id": 675,
+      "base_gid": 57,
+      "cover_gid": 155
+    },
+    {
+      "source_metatile_id": 676,
+      "base_gid": 58,
+      "cover_gid": 156
+    },
+    {
+      "source_metatile_id": 677,
+      "base_gid": 59,
+      "cover_gid": 157
+    },
+    {
+      "source_metatile_id": 678,
+      "base_gid": 60,
+      "cover_gid": 158
+    },
+    {
+      "source_metatile_id": 679,
+      "base_gid": 61,
+      "cover_gid": 159
+    },
+    {
+      "source_metatile_id": 680,
+      "base_gid": 62,
+      "cover_gid": 160
+    },
+    {
+      "source_metatile_id": 681,
+      "base_gid": 63,
+      "cover_gid": 161
+    },
+    {
+      "source_metatile_id": 684,
+      "base_gid": 64,
+      "cover_gid": 162
+    },
+    {
+      "source_metatile_id": 685,
+      "base_gid": 65,
+      "cover_gid": 163
+    },
+    {
+      "source_metatile_id": 686,
+      "base_gid": 66,
+      "cover_gid": 164
+    },
+    {
+      "source_metatile_id": 687,
+      "base_gid": 67,
+      "cover_gid": 165
+    },
+    {
+      "source_metatile_id": 688,
+      "base_gid": 68,
+      "cover_gid": 166
+    },
+    {
+      "source_metatile_id": 689,
+      "base_gid": 69,
+      "cover_gid": 167
+    },
+    {
+      "source_metatile_id": 691,
+      "base_gid": 70,
+      "cover_gid": 168
+    },
+    {
+      "source_metatile_id": 692,
+      "base_gid": 71,
+      "cover_gid": 169
+    },
+    {
+      "source_metatile_id": 693,
+      "base_gid": 72,
+      "cover_gid": 170
+    },
+    {
+      "source_metatile_id": 694,
+      "base_gid": 73,
+      "cover_gid": 171
+    },
+    {
+      "source_metatile_id": 696,
+      "base_gid": 74,
+      "cover_gid": 172
+    },
+    {
+      "source_metatile_id": 697,
+      "base_gid": 75,
+      "cover_gid": 173
+    },
+    {
+      "source_metatile_id": 699,
+      "base_gid": 76,
+      "cover_gid": 174
+    },
+    {
+      "source_metatile_id": 700,
+      "base_gid": 77,
+      "cover_gid": 175
+    },
+    {
+      "source_metatile_id": 701,
+      "base_gid": 78,
+      "cover_gid": 176
+    },
+    {
+      "source_metatile_id": 702,
+      "base_gid": 79,
+      "cover_gid": 177
+    },
+    {
+      "source_metatile_id": 703,
+      "base_gid": 80,
+      "cover_gid": 178
+    },
+    {
+      "source_metatile_id": 704,
+      "base_gid": 81,
+      "cover_gid": 179
+    },
+    {
+      "source_metatile_id": 705,
+      "base_gid": 82,
+      "cover_gid": 180
+    },
+    {
+      "source_metatile_id": 706,
+      "base_gid": 83,
+      "cover_gid": 181
+    },
+    {
+      "source_metatile_id": 707,
+      "base_gid": 84,
+      "cover_gid": 182
+    },
+    {
+      "source_metatile_id": 708,
+      "base_gid": 85,
+      "cover_gid": 183
+    },
+    {
+      "source_metatile_id": 709,
+      "base_gid": 86,
+      "cover_gid": 184
+    },
+    {
+      "source_metatile_id": 710,
+      "base_gid": 87,
+      "cover_gid": 185
+    },
+    {
+      "source_metatile_id": 711,
+      "base_gid": 88,
+      "cover_gid": 186
+    },
+    {
+      "source_metatile_id": 712,
+      "base_gid": 89,
+      "cover_gid": 187
+    },
+    {
+      "source_metatile_id": 713,
+      "base_gid": 90,
+      "cover_gid": 188
+    },
+    {
+      "source_metatile_id": 715,
+      "base_gid": 91,
+      "cover_gid": 189
+    },
+    {
+      "source_metatile_id": 716,
+      "base_gid": 92,
+      "cover_gid": 190
+    },
+    {
+      "source_metatile_id": 717,
+      "base_gid": 93,
+      "cover_gid": 191
+    },
+    {
+      "source_metatile_id": 718,
+      "base_gid": 94,
+      "cover_gid": 192
+    },
+    {
+      "source_metatile_id": 720,
+      "base_gid": 95,
+      "cover_gid": 193
+    },
+    {
+      "source_metatile_id": 721,
+      "base_gid": 96,
+      "cover_gid": 194
+    },
+    {
+      "source_metatile_id": 722,
+      "base_gid": 97,
+      "cover_gid": 195
+    },
+    {
+      "source_metatile_id": 728,
+      "base_gid": 98,
+      "cover_gid": 196
+    }
+  ]
+}

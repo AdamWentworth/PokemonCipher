@@ -14,7 +14,11 @@ TilemapRenderer::TilemapRenderer(
 
 void TilemapRenderer::setTilesets(const char* baseTilesetPath, const char* coverTilesetPath) {
     baseTileset_ = baseTilesetPath ? textureManager_.load(baseTilesetPath) : nullptr;
-    coverTileset_ = coverTilesetPath ? textureManager_.load(coverTilesetPath) : nullptr;
+    if (coverTilesetPath && coverTilesetPath[0] != '\0') {
+        coverTileset_ = textureManager_.load(coverTilesetPath);
+    } else {
+        coverTileset_ = baseTileset_;
+    }
 }
 
 int TilemapRenderer::getTilesetColumns(SDL_Texture* texture, const Map& map) const {

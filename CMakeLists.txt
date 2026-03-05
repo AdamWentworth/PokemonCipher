@@ -29,6 +29,7 @@ add_executable(PokemonCipher
   src/game/dev/OverworldDevConsoleStateHandlers.cpp
   src/game/scripting/LuaOverworldScriptLoader.cpp
   src/game/ui/DialogueOverlay.cpp
+  src/game/ui/StartMenuOverlay.cpp
   src/game/world/DefaultMapRegistry.cpp
   src/game/world/OverworldEntityFactory.cpp
 

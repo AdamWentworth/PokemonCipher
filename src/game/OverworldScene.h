@@ -17,6 +17,7 @@
 #include "game/state/GameState.h"
 #include "game/systems/GridMovementSystem.h"
 #include "game/ui/DialogueOverlay.h"
+#include "game/ui/StartMenuOverlay.h"
 #include "game/world/MapRegistry.h"
 
 class OverworldScene : public Scene {
@@ -69,6 +70,7 @@ private:
     bool scriptInputLocked_ = false;
     bool introScriptChecked_ = false;
     bool scriptAdvanceRequested_ = false;
+    StartMenuOverlay startMenuOverlay_;
 
     Map map_;
     TilemapRenderer tilemapRenderer_;

@@ -119,7 +119,7 @@ void OverworldScene::setScriptInputEnabled(const bool isEnabled) {
 }
 
 void OverworldScene::refreshInputState() {
-    gridMovementSystem_.setInputEnabled(!debugConsoleOpen_ && !scriptInputLocked_);
+    gridMovementSystem_.setInputEnabled(!debugConsoleOpen_ && !scriptInputLocked_ && !startMenuOverlay_.isOpen());
 }
 
 void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
@@ -128,6 +128,10 @@ void OverworldScene::setDebugConsoleOpen(const bool isOpen) {
     }
 
     debugConsoleOpen_ = isOpen;
+    if (debugConsoleOpen_) {
+        startMenuOverlay_.close();
+        startMenuOverlay_.clearStatusText();
+    }
     debugConsoleInput_.clear();
 
     SDL_Window* const keyboardWindow = SDL_GetKeyboardFocus();

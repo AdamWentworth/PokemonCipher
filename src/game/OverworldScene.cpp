@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_keycode.h>
@@ -35,6 +36,54 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat && event.key.key == SDLK_GRAVE) {
         setDebugConsoleOpen(!debugConsoleOpen_);
         return;
+    }
+
+    if (!debugConsoleOpen_ && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+        const SDL_Keycode key = event.key.key;
+        if (!startMenuOverlay_.isOpen() && !scriptRunner_.isRunning() && (key == SDLK_ESCAPE || key == SDLK_TAB)) {
+            startMenuOverlay_.open();
+            startMenuOverlay_.clearStatusText();
+            refreshInputState();
+            return;
+        }
+
+        if (startMenuOverlay_.isOpen()) {
+            const StartMenuAction action = startMenuOverlay_.handleKey(key);
+            switch (action) {
+            case StartMenuAction::Closed:
+                startMenuOverlay_.clearStatusText();
+                refreshInputState();
+                return;
+            case StartMenuAction::Party: {
+                const auto& party = gameState_.party();
+                if (party.empty()) {
+                    startMenuOverlay_.setStatusText("No Pokemon in party.");
+                    printConsole("Start menu: party is empty.");
+                    return;
+                }
+
+                std::ostringstream stream;
+                stream << "Party count: " << party.size();
+                startMenuOverlay_.setStatusText(stream.str());
+                printConsole("Start menu: party view placeholder.");
+                return;
+            }
+            case StartMenuAction::Bag:
+                startMenuOverlay_.setStatusText("Bag not implemented yet.");
+                printConsole("Start menu: bag placeholder.");
+                return;
+            case StartMenuAction::Save:
+                startMenuOverlay_.setStatusText("Save not implemented yet.");
+                printConsole("Start menu: save placeholder.");
+                return;
+            case StartMenuAction::Options:
+                startMenuOverlay_.setStatusText("Options not implemented yet.");
+                printConsole("Start menu: options placeholder.");
+                return;
+            case StartMenuAction::None:
+                return;
+            }
+        }
     }
 
     if (!debugConsoleOpen_) {
@@ -135,6 +184,7 @@ void OverworldScene::render() {
     }
 
     dialogueOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
+    startMenuOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
 }
 
 bool OverworldScene::warpTo(const std::string& mapId, const std::string& spawnId) {

@@ -1,5 +1,7 @@
 #include "Map.h"
 
+#include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <string>
 
@@ -87,6 +89,7 @@ bool Map::load(const char* path) {
     blockingRects.clear();
     warpPoints.clear();
     encounterZones.clear();
+    spawnPoints.clear();
     bool foundSpawn = false;
 
     for (auto* objectGroup = mapNode->FirstChildElement("objectgroup");
@@ -162,6 +165,24 @@ bool Map::load(const char* path) {
                 foundSpawn = true;
             }
 
+            if (isSpawnLayer) {
+                const float spawnX = object->FloatAttribute("x");
+                const float spawnY = object->FloatAttribute("y");
+
+                std::string spawnId = "default";
+                if (const char* name = object->Attribute("name"); name && name[0] != '\0') {
+                    spawnId = name;
+                } else {
+                    spawnId = std::to_string(object->IntAttribute("id", 0));
+                }
+
+                std::transform(spawnId.begin(), spawnId.end(), spawnId.begin(), [](const unsigned char ch) {
+                    return static_cast<char>(std::tolower(ch));
+                });
+
+                spawnPoints[spawnId] = Vector2D(spawnX, spawnY);
+            }
+
             if (isWarpLayer) {
                 WarpPoint warp{};
                 warp.area = getRectFromObject();
@@ -199,4 +220,18 @@ bool Map::load(const char* path) {
     }
 
     return true;
+}
+
+Vector2D Map::getSpawnPoint(const std::string& spawnId) const {
+    std::string key = spawnId;
+    std::transform(key.begin(), key.end(), key.begin(), [](const unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+
+    const auto it = spawnPoints.find(key);
+    if (it != spawnPoints.end()) {
+        return it->second;
+    }
+
+    return playerSpawn;
 }

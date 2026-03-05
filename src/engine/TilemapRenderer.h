@@ -11,6 +11,7 @@
 class TilemapRenderer {
 public:
     TilemapRenderer(TextureManager& textureManager, const char* baseTilesetPath, const char* coverTilesetPath = nullptr);
+    void setTilesets(const char* baseTilesetPath, const char* coverTilesetPath = nullptr);
 
     void renderGround(const Map& map, const Camera& camera);
     void renderCover(const Map& map, const Camera& camera);

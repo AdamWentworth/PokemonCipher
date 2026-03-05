@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,7 @@ struct EncounterZone {
 class Map {
 public:
     bool load(const char* path);
+    Vector2D getSpawnPoint(const std::string& spawnId) const;
 
     int width = 0;
     int height = 0;
@@ -32,5 +34,6 @@ public:
     std::vector<SDL_FRect> blockingRects;
     std::vector<WarpPoint> warpPoints;
     std::vector<EncounterZone> encounterZones;
+    std::unordered_map<std::string, Vector2D> spawnPoints;
     Vector2D playerSpawn{64.0f, 64.0f};
 };

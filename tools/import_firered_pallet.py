@@ -332,7 +332,7 @@ def write_tmx(
         *collision_objects,
         " </objectgroup>",
         " <objectgroup id=\"4\" name=\"Player Spawn Points\">",
-        f"  <object id=\"1\" x=\"{spawn_x}\" y=\"{spawn_y}\"><point/></object>",
+        f"  <object id=\"1\" name=\"default\" x=\"{spawn_x}\" y=\"{spawn_y}\"><point/></object>",
         " </objectgroup>",
         " <objectgroup id=\"5\" name=\"Warp Layer\">",
         *warp_objects,

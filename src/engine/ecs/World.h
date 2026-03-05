@@ -47,6 +47,11 @@ public:
         return collisions_;
     }
 
+    void clear() {
+        collisions_.clear();
+        entities_.clear();
+    }
+
     template <typename T>
     Entity* findFirstWith() {
         for (const auto& entity : entities_) {

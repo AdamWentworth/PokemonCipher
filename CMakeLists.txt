@@ -43,8 +43,14 @@ add_executable(PokemonCipher
   src/game/ui/PartyMenuLayout.cpp
   src/game/ui/PartyMenuOverlay.cpp
   src/game/ui/PokemonSummaryLayout.cpp
+  src/game/ui/PokemonSummaryLayoutProvider.cpp
+  src/game/ui/PokemonSummaryRenderUtils.cpp
   src/game/ui/SummaryContent.cpp
   src/game/ui/PokemonSummaryOverlay.cpp
+  src/game/ui/PokemonSummaryOverlayRender.cpp
+  src/game/ui/PokemonSummaryOverlayInfoPage.cpp
+  src/game/ui/PokemonSummaryOverlaySkillsPage.cpp
+  src/game/ui/PokemonSummaryOverlayMovesPage.cpp
   src/game/ui/StartMenuOverlay.cpp
   src/game/world/DefaultMapRegistry.cpp
   src/game/world/MapRegistryLoader.cpp

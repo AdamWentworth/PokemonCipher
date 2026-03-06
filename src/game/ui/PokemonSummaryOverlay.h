@@ -7,6 +7,10 @@
 #include "game/state/GameState.h"
 
 class TextureManager;
+struct SDL_Renderer;
+struct SDL_Texture;
+struct PokemonSummaryLayout;
+struct SpeciesDefinition;
 
 enum class PokemonSummaryAction {
     None,
@@ -49,6 +53,39 @@ private:
     int partyCount(const std::vector<PartyPokemon>& party) const;
     void moveMonSelection(SDL_Keycode key, int partyCount);
     void flipPage(SDL_Keycode key);
+    void renderInfoPage(
+        TextureManager& textureManager,
+        SDL_Renderer* renderer,
+        SDL_Texture* menuInfoTexture,
+        const PartyPokemon& member,
+        const char* speciesName,
+        const SpeciesDefinition* speciesData,
+        float scale,
+        float offsetX,
+        float offsetY,
+        const PokemonSummaryLayout& layout
+    ) const;
+    void renderSkillsPage(
+        TextureManager& textureManager,
+        SDL_Renderer* renderer,
+        const PartyPokemon& member,
+        const DisplayStats& stats,
+        float scale,
+        float offsetX,
+        float offsetY,
+        const PokemonSummaryLayout& layout
+    ) const;
+    void renderMovesPage(
+        TextureManager& textureManager,
+        SDL_Renderer* renderer,
+        SDL_Texture* menuInfoTexture,
+        const PartyPokemon& member,
+        const DisplayStats& stats,
+        float scale,
+        float offsetX,
+        float offsetY,
+        const PokemonSummaryLayout& layout
+    ) const;
 
     static DisplayStats makeDisplayStats(const PartyPokemon& member);
 

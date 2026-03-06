@@ -15,6 +15,7 @@
 #include "game/data/SpeciesRegistry.h"
 #include "game/ui/PokemonSummaryLayout.h"
 #include "game/ui/FrlgTextRenderer.h"
+#include "game/ui/SummaryContent.h"
 
 namespace {
 constexpr const char* kAssetPageInfo = "assets/ui/summary_screen/page_info.png";
@@ -429,102 +430,6 @@ void renderSegmentedGauge(
     drawFrameAt(11, middleSegments + 2);
 }
 
-const char* pageTitleFor(const int pageIndex) {
-    switch (pageIndex) {
-    case 0:
-        return "POKEMON INFO";
-    case 1:
-        return "POKEMON SKILLS";
-    case 2:
-        return "KNOWN MOVES";
-    default:
-        return "POKEMON INFO";
-    }
-}
-
-const char* controlsTextFor(const int pageIndex) {
-    (void)pageIndex;
-    return "";
-}
-
-const char* itemTextFor(const PartyPokemon& member) {
-    if (member.isPartner) {
-        return "NONE";
-    }
-    return "NONE";
-}
-
-struct MoveDisplay {
-    const char* name = "-------";
-    int pp = 0;
-    int maxPp = 0;
-    int typeId = kTypeMystery;
-};
-
-struct SpeciesTypeDisplay {
-    int primary = kTypeMystery;
-    int secondary = kTypeMystery;
-};
-
-const SpeciesDefinition* speciesDefinitionFor(const PartyPokemon& member) {
-    return getSpeciesRegistry().find(member.speciesId);
-}
-
-const char* abilityNameFor(const PartyPokemon& member) {
-    if (const SpeciesDefinition* species = speciesDefinitionFor(member);
-        species != nullptr && !species->abilityName.empty()) {
-        return species->abilityName.c_str();
-    }
-    return "UNKNOWN";
-}
-
-const char* abilityDescriptionFor(const PartyPokemon& member) {
-    if (const SpeciesDefinition* species = speciesDefinitionFor(member);
-        species != nullptr && !species->abilityDescription.empty()) {
-        return species->abilityDescription.c_str();
-    }
-    return "No ability data.";
-}
-
-SpeciesTypeDisplay typeIdsForSpecies(const PartyPokemon& member) {
-    if (const SpeciesDefinition* species = speciesDefinitionFor(member)) {
-        return SpeciesTypeDisplay{species->primaryTypeId, species->secondaryTypeId};
-    }
-    return SpeciesTypeDisplay{kTypeMystery, kTypeMystery};
-}
-
-int movePpColorIndex(const int pp, const int maxPp) {
-    if (maxPp <= 0 || pp >= maxPp) {
-        return 0;
-    }
-
-    if (pp <= 0) {
-        return 3;
-    }
-
-    if (maxPp == 3) {
-        if (pp == 2) {
-            return 2;
-        }
-        if (pp == 1) {
-            return 1;
-        }
-    } else if (maxPp == 2) {
-        if (pp == 1) {
-            return 1;
-        }
-    } else {
-        if (pp <= (maxPp / 4)) {
-            return 2;
-        }
-        if (pp <= (maxPp / 2)) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 SDL_Color movePpColorFromIndex(const int colorIndex) {
     switch (colorIndex) {
     case 1:
@@ -551,28 +456,6 @@ SDL_Color movePpShadowColorFromIndex(const int colorIndex) {
     }
 }
 
-std::array<MoveDisplay, 4> movesFor(const PartyPokemon& member) {
-    std::array<MoveDisplay, 4> result{{
-        {"-------", 0, 0, kTypeMystery},
-        {"-------", 0, 0, kTypeMystery},
-        {"-------", 0, 0, kTypeMystery},
-        {"-------", 0, 0, kTypeMystery},
-    }};
-
-    const SpeciesDefinition* species = speciesDefinitionFor(member);
-    if (!species) {
-        return result;
-    }
-
-    for (std::size_t i = 0; i < result.size(); ++i) {
-        const SpeciesMoveDefinition& move = species->moves[i];
-        result[i].name = move.name.empty() ? "-------" : move.name.c_str();
-        result[i].pp = std::max(0, move.pp);
-        result[i].maxPp = std::max(0, move.maxPp);
-        result[i].typeId = move.typeId;
-    }
-    return result;
-}
 } // namespace
 
 void PokemonSummaryOverlay::open(const std::vector<PartyPokemon>& party, const int selectedIndex) {
@@ -717,14 +600,14 @@ void PokemonSummaryOverlay::render(
     }
 
     const PartyPokemon& member = party[static_cast<std::size_t>(selectedIndex_)];
-    const SpeciesDefinition* speciesData = speciesDefinitionFor(member);
+    const SpeciesDefinition* speciesData = summary_content::speciesDefinitionFor(member);
     const DisplayStats stats = makeDisplayStats(member);
     const char* speciesName = (speciesData && !speciesData->name.empty()) ? speciesData->name.c_str() : "POKEMON";
 
     const int pageIndex = static_cast<int>(page_);
     renderDebugTextWindowAligned(
         textureManager,
-        pageTitleFor(pageIndex),
+        summary_content::pageTitleFor(pageIndex),
         layout.windowPageName,
         layout.headerTitleX,
         layout.headerTitleY,
@@ -735,7 +618,7 @@ void PokemonSummaryOverlay::render(
         kTextColorLight,
         kTextColorLightShadow
     );
-    const std::string controlsText = controlsTextFor(pageIndex);
+    const std::string controlsText = summary_content::controlsTextFor(pageIndex);
     if (!controlsText.empty()) {
         renderDebugTextWindowAligned(
             textureManager,
@@ -839,7 +722,7 @@ void PokemonSummaryOverlay::render(
             offsetY
         );
 
-        const SpeciesTypeDisplay speciesTypes = typeIdsForSpecies(member);
+        const summary_content::SpeciesTypeDisplay speciesTypes = summary_content::typeIdsForSpecies(member);
         renderTypeIcon(
             renderer,
             menuInfoTexture,
@@ -885,7 +768,7 @@ void PokemonSummaryOverlay::render(
         );
         renderDebugTextWindowAligned(
             textureManager,
-            itemTextFor(member),
+            summary_content::itemTextFor(member),
             layout.windowInfoRightPane,
             layout.infoItemX,
             layout.infoItemY,
@@ -1055,7 +938,7 @@ void PokemonSummaryOverlay::render(
 
         renderDebugTextWindowAligned(
             textureManager,
-            abilityNameFor(member),
+            summary_content::abilityNameFor(member),
             layout.windowSkillsAbility,
             layout.skillsAbilityNameX,
             layout.skillsAbilityNameY,
@@ -1065,7 +948,7 @@ void PokemonSummaryOverlay::render(
         );
         renderDebugTextWindowAligned(
             textureManager,
-            abilityDescriptionFor(member),
+            summary_content::abilityDescriptionFor(member),
             layout.windowSkillsAbility,
             layout.skillsAbilityDescX,
             layout.skillsAbilityDescY,
@@ -1085,12 +968,12 @@ void PokemonSummaryOverlay::render(
             offsetY
         );
     } else {
-        const auto moves = movesFor(member);
+        const auto moves = summary_content::movesFor(member);
         for (int i = 0; i < 4; ++i) {
-            const MoveDisplay& move = moves[static_cast<std::size_t>(i)];
+            const summary_content::MoveDisplay& move = moves[static_cast<std::size_t>(i)];
             const float nameY = (layout.movesRowStepY * static_cast<float>(i)) + layout.movesNameBaseY;
             const float ppY = nameY + layout.movesPpYOffset;
-            const int ppColorIndex = movePpColorIndex(move.pp, move.maxPp);
+            const int ppColorIndex = summary_content::movePpColorIndex(move.pp, move.maxPp);
             const SDL_Color ppTextColor = movePpColorFromIndex(ppColorIndex);
             const SDL_Color ppShadowColor = movePpShadowColorFromIndex(ppColorIndex);
 

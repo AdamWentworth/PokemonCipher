@@ -16,6 +16,8 @@ add_executable(PokemonCipher
   src/engine/Game.cpp
   src/engine/TextureManager.cpp
   src/engine/Map.cpp
+  src/engine/map/CompiledMapLoader.cpp
+  src/engine/map/TmxMapLoader.cpp
   src/engine/TilemapRenderer.cpp
 
   src/game/OverworldScene.cpp
@@ -41,6 +43,7 @@ add_executable(PokemonCipher
   src/game/ui/PartyMenuLayout.cpp
   src/game/ui/PartyMenuOverlay.cpp
   src/game/ui/PokemonSummaryLayout.cpp
+  src/game/ui/SummaryContent.cpp
   src/game/ui/PokemonSummaryOverlay.cpp
   src/game/ui/StartMenuOverlay.cpp
   src/game/world/DefaultMapRegistry.cpp

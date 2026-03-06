@@ -19,6 +19,9 @@ public:
         const std::string key = normalize(map.id);
         maps_[key] = map;
         aliases_[key] = key;
+        if (!key.empty() && !key.starts_with("map_")) {
+            aliases_["map_" + key] = key;
+        }
     }
 
     void addAlias(const std::string& alias, const std::string& mapId) {

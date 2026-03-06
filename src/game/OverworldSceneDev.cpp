@@ -148,7 +148,9 @@ void OverworldScene::refreshInputState() {
         !debugConsoleOpen_ &&
         !scriptInputLocked_ &&
         !startMenuOverlay_.isOpen() &&
-        !partyMenuOverlay_.isOpen()
+        !partyMenuOverlay_.isOpen() &&
+        !pokemonSummaryOverlay_.isOpen() &&
+        !isWarpTransitionActive()
     );
 }
 

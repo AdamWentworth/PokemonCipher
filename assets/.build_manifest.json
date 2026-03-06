@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-03-06T04:48:25.651329+00:00",
+  "firered_root": "C:\\Code\\pokefirered",
+  "stages": {
+    "summary": false,
+    "party_menu": false,
+    "maps": true
+  },
+  "map_manifest": "C:\\Code\\PokemonCipher\\tools\\map_import_manifest.json",
+  "input_hashes": {
+    "tools/build_assets.py": "cd4ac2d73178731103440c2f129efd3806cc8ea6b0edd4c6a061742101422d18",
+    "tools/import_firered_pallet.py": "10fb274e1b7caf70ee9444614322c67f69426c9e0d4e432b5f426ba4331e7885",
+    "tools/map_import_manifest.json": "71ecf09e2171ef5eb1a9a3754730d28b38ead250db768569fc1d425c7966521b"
+  }
+}

@@ -21,6 +21,7 @@
 #include "game/systems/GridMovementSystem.h"
 #include "game/ui/DialogueOverlay.h"
 #include "game/ui/PartyMenuOverlay.h"
+#include "game/ui/PokemonSummaryOverlay.h"
 #include "game/ui/StartMenuOverlay.h"
 #include "game/world/MapRegistry.h"
 
@@ -48,6 +49,19 @@ public:
     const std::string& currentMapId() const { return currentMapId_; }
 
 private:
+    struct PendingMapWarp {
+        std::string targetMap;
+        std::string targetSpawnId = "default";
+        std::optional<Vector2D> targetSpawnOverride;
+        Vector2D entryDirection{};
+    };
+
+    enum class WarpTransitionPhase {
+        None,
+        FadeOut,
+        FadeIn,
+    };
+
     void createDevConsole();
     bool tryInteractWithNpc();
     void renderDevConsoleOverlay() const;
@@ -68,6 +82,16 @@ private:
         const std::string& spawnId,
         const std::optional<Vector2D>& spawnOverride = std::nullopt
     );
+    void queueMapWarp(
+        std::string targetMap,
+        std::string targetSpawnId,
+        std::optional<Vector2D> targetSpawnOverride,
+        Vector2D entryDirection
+    );
+    void updateWarpTransition(float dt);
+    void renderWarpTransitionOverlay() const;
+    bool isWarpTransitionActive() const { return warpTransitionPhase_ != WarpTransitionPhase::None; }
+    void applyPlayerFacing(Vector2D facingDirection);
     void checkMapWarps(float dt);
     static std::string normalizeMapKey(std::string key);
 
@@ -78,6 +102,12 @@ private:
     int viewportWidth_ = 0;
     int viewportHeight_ = 0;
     float warpCooldownSeconds_ = 0.0f;
+    bool requireWarpTileExit_ = false;
+    Vector2D warpEntryDirection_{};
+    std::optional<PendingMapWarp> pendingMapWarp_;
+    WarpTransitionPhase warpTransitionPhase_ = WarpTransitionPhase::None;
+    float warpTransitionTimerSeconds_ = 0.0f;
+    float warpTransitionDurationSeconds_ = 0.12f;
     bool debugConsoleOpen_ = false;
     std::string debugConsoleInput_;
     std::deque<std::string> debugConsoleHistory_;
@@ -92,6 +122,7 @@ private:
     std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback_;
     StartMenuOverlay startMenuOverlay_;
     PartyMenuOverlay partyMenuOverlay_;
+    PokemonSummaryOverlay pokemonSummaryOverlay_;
 
     Map map_;
     TilemapRenderer tilemapRenderer_;

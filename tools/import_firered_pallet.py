@@ -41,14 +41,28 @@ WATER_BEHAVIOR_IDS = {
     0x1B,  # MB_CYCLING_ROAD_WATER
 }
 
+STAIR_WARP_RIGHT_BEHAVIOR_IDS = {
+    0x6C,  # MB_UP_RIGHT_STAIR_WARP
+    0x6E,  # MB_DOWN_RIGHT_STAIR_WARP
+}
+
+STAIR_WARP_LEFT_BEHAVIOR_IDS = {
+    0x6D,  # MB_UP_LEFT_STAIR_WARP
+    0x6F,  # MB_DOWN_LEFT_STAIR_WARP
+}
+
 ORGANIZED_ATLAS_COLUMNS = 16
 
 
 def to_snake_case(symbol_name: str) -> str:
     chars = []
     for index, ch in enumerate(symbol_name):
-        if ch.isupper() and index > 0 and symbol_name[index - 1].islower():
-            chars.append("_")
+        if index > 0:
+            prev = symbol_name[index - 1]
+            is_word_boundary = ch.isupper() and prev.islower()
+            is_alpha_num_boundary = (ch.isdigit() and prev.isalpha()) or (ch.isalpha() and prev.isdigit())
+            if is_word_boundary or is_alpha_num_boundary:
+                chars.append("_")
         chars.append(ch.lower())
     return "".join(chars)
 
@@ -447,6 +461,109 @@ def build_connection_warps(
     return warps
 
 
+def parse_warp_id(value: object) -> int | None:
+    if value is None:
+        return None
+
+    if isinstance(value, int):
+        return value if value >= 0 else None
+
+    try:
+        parsed = int(str(value), 0)
+    except (TypeError, ValueError):
+        return None
+
+    return parsed if parsed >= 0 else None
+
+
+def annotate_target_spawn_ids(map_warp_events: list[dict]) -> None:
+    for warp in map_warp_events:
+        warp_id = parse_warp_id(warp.get("dest_warp_id"))
+        if warp_id is None:
+            continue
+
+        warp["target_spawn_id"] = f"warp_{warp_id}"
+
+
+def annotate_directional_stair_warps(
+    map_warp_events: list[dict],
+    map_width: int,
+    map_height: int,
+    metatile_ids: list[int],
+    primary_attributes: list[int],
+    secondary_attributes: list[int],
+) -> None:
+    for warp in map_warp_events:
+        try:
+            x = int(warp.get("x", 0))
+            y = int(warp.get("y", 0))
+        except (TypeError, ValueError):
+            continue
+
+        if x < 0 or y < 0 or x >= map_width or y >= map_height:
+            continue
+
+        metatile_id = metatile_ids[y * map_width + x]
+        attributes = get_metatile_attributes(metatile_id, primary_attributes, secondary_attributes)
+        behavior = attributes & METATILE_ATTRIBUTE_BEHAVIOR_MASK
+        if behavior in STAIR_WARP_LEFT_BEHAVIOR_IDS:
+            warp["required_direction"] = "left"
+        elif behavior in STAIR_WARP_RIGHT_BEHAVIOR_IDS:
+            warp["required_direction"] = "right"
+
+
+def movement_type_to_facing(movement_type: str) -> str:
+    normalized = movement_type.upper()
+    if "FACE_UP" in normalized:
+        return "up"
+    if "FACE_LEFT" in normalized:
+        return "left"
+    if "FACE_RIGHT" in normalized:
+        return "right"
+    return "down"
+
+
+def build_oak_npc_events(map_json: dict, map_name: str) -> list[dict]:
+    if map_name != "PalletTown_ProfessorOaksLab":
+        return []
+
+    npc_events: list[dict] = []
+    for obj in map_json.get("object_events", []):
+        graphics_id = str(obj.get("graphics_id", ""))
+        local_id = str(obj.get("local_id", ""))
+        graphics_upper = graphics_id.upper()
+        local_upper = local_id.upper()
+        has_oak_graphic = "PROF_OAK" in graphics_upper
+        has_oak_token = re.search(r"(^|_)OAK($|_)", local_upper) is not None
+        if not has_oak_graphic and not has_oak_token:
+            continue
+
+        try:
+            x = int(obj.get("x", 0))
+            y = int(obj.get("y", 0))
+        except (TypeError, ValueError):
+            continue
+
+        npc_id = normalize_slug(local_id or graphics_id or f"oak_{len(npc_events)}")
+        movement_type = str(obj.get("movement_type", ""))
+        npc_events.append(
+            {
+                "id": npc_id,
+                "x": x,
+                "y": y,
+                "width": 1,
+                "height": 1,
+                "facing": movement_type_to_facing(movement_type),
+                "script_id": "oak_lab_eevee",
+                "speaker": "PROF. OAK",
+                "sprite": "assets/characters/oak/oak_overworld.png",
+                "animation": "assets/animations/red_overworld.xml",
+            }
+        )
+
+    return npc_events
+
+
 def read_map_grid(path: Path, width: int, height: int) -> list[int]:
     values = list(struct.unpack(f"<{path.stat().st_size // 2}H", path.read_bytes()))
     expected = width * height
@@ -472,6 +589,39 @@ def merge_collision_runs(blocked_grid: list[bool], width: int, height: int, tile
             run_width = x - run_start
             rectangles.append((run_start * tile_size, y * tile_size, run_width * tile_size, tile_size))
     return rectangles
+
+
+def carve_warp_tiles_from_collision(
+    blocked_grid: list[bool],
+    width: int,
+    height: int,
+    warp_events: list[dict],
+) -> None:
+    for warp in warp_events:
+        try:
+            start_x = int(warp.get("x", 0))
+            start_y = int(warp.get("y", 0))
+        except (TypeError, ValueError):
+            continue
+
+        try:
+            warp_width = max(1, int(warp.get("width", 1)))
+            warp_height = max(1, int(warp.get("height", 1)))
+        except (TypeError, ValueError):
+            warp_width = 1
+            warp_height = 1
+
+        for dy in range(warp_height):
+            tile_y = start_y + dy
+            if tile_y < 0 or tile_y >= height:
+                continue
+
+            for dx in range(warp_width):
+                tile_x = start_x + dx
+                if tile_x < 0 or tile_x >= width:
+                    continue
+
+                blocked_grid[tile_y * width + tile_x] = False
 
 
 def build_organized_metatile_mapping(metatile_ids: list[int]) -> tuple[list[int], dict[int, int]]:
@@ -521,6 +671,8 @@ def write_tmx(
     spawn_x: int,
     spawn_y: int,
     warp_events: list[dict],
+    map_warp_events: list[dict],
+    npc_events: list[dict],
 ) -> None:
     ground_csv_lines = []
     for row in range(map_height):
@@ -540,6 +692,14 @@ def write_tmx(
     for i, (x, y, w, h) in enumerate(collision_rects, start=1):
         collision_objects.append(f'  <object id="{i}" x="{x}" y="{y}" width="{w}" height="{h}"/>')
 
+    spawn_objects = [f'  <object id="1" name="default" x="{spawn_x}" y="{spawn_y}"><point/></object>']
+    for i, warp in enumerate(map_warp_events, start=1):
+        warp_spawn_x = int(warp.get("x", 0)) * tile_size
+        warp_spawn_y = int(warp.get("y", 0)) * tile_size
+        spawn_objects.append(
+            f'  <object id="{i + 1}" name="warp_{i - 1}" x="{warp_spawn_x}" y="{warp_spawn_y}"><point/></object>'
+        )
+
     warp_objects = []
     for i, warp in enumerate(warp_events, start=1):
         dest_map = warp.get("dest_map", "")
@@ -550,7 +710,13 @@ def write_tmx(
 
         target_spawn_x = warp.get("target_spawn_x")
         target_spawn_y = warp.get("target_spawn_y")
+        target_spawn_id = str(warp.get("target_spawn_id", "")).strip()
+        required_direction = str(warp.get("required_direction", "")).strip().lower()
         properties = [f'    <property name="target_map" value="{escape(dest_map)}"/>']
+        if target_spawn_id:
+            properties.append(f'    <property name="target_spawn_id" value="{escape(target_spawn_id)}"/>')
+        if required_direction:
+            properties.append(f'    <property name="required_direction" value="{escape(required_direction)}"/>')
         if target_spawn_x is not None and target_spawn_y is not None:
             properties.append(f'    <property name="target_spawn_x" value="{target_spawn_x}"/>')
             properties.append(f'    <property name="target_spawn_y" value="{target_spawn_y}"/>')
@@ -560,6 +726,31 @@ def write_tmx(
                 f'  <object id="{i}" x="{x}" y="{y}" width="{width}" height="{height}">',
                 "   <properties>",
                 *properties,
+                "   </properties>",
+                "  </object>",
+            ])
+        )
+
+    npc_objects = []
+    for i, npc in enumerate(npc_events, start=1):
+        npc_x = int(npc.get("x", 0)) * tile_size
+        npc_y = int(npc.get("y", 0)) * tile_size
+        npc_w = int(npc.get("width", 1)) * tile_size
+        npc_h = int(npc.get("height", 1)) * tile_size
+        npc_name = str(npc.get("id", f"npc_{i}"))
+
+        npc_properties = []
+        for field in ("script_id", "facing", "speaker", "dialogue", "sprite", "animation"):
+            value = str(npc.get(field, "")).strip()
+            if not value:
+                continue
+            npc_properties.append(f'    <property name="{field}" value="{escape(value)}"/>')
+
+        npc_objects.append(
+            "\n".join([
+                f'  <object id="{i}" name="{escape(npc_name)}" x="{npc_x}" y="{npc_y}" width="{npc_w}" height="{npc_h}">',
+                "   <properties>",
+                *npc_properties,
                 "   </properties>",
                 "  </object>",
             ])
@@ -589,16 +780,131 @@ def write_tmx(
         *collision_objects,
         " </objectgroup>",
         " <objectgroup id=\"4\" name=\"Player Spawn Points\">",
-        f"  <object id=\"1\" name=\"default\" x=\"{spawn_x}\" y=\"{spawn_y}\"><point/></object>",
+        *spawn_objects,
         " </objectgroup>",
         " <objectgroup id=\"5\" name=\"Warp Layer\">",
         *warp_objects,
+        " </objectgroup>",
+        " <objectgroup id=\"6\" name=\"NPC Layer\">",
+        *npc_objects,
         " </objectgroup>",
         "</map>",
         "",
     ])
 
     tmx_path.write_text(xml, encoding="utf-8")
+
+
+def write_length_prefixed_string(stream, value: str) -> None:
+    encoded = value.encode("utf-8")
+    stream.write(struct.pack("<I", len(encoded)))
+    stream.write(encoded)
+
+
+def int_or_default(value: object, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def write_pcmap(
+    output_path: Path,
+    map_width: int,
+    map_height: int,
+    tile_size: int,
+    ground_layer_values: list[int],
+    cover_layer_values: list[int],
+    collision_rects: list[tuple[int, int, int, int]],
+    spawn_x: int,
+    spawn_y: int,
+    warp_events: list[dict],
+    map_warp_events: list[dict],
+    npc_events: list[dict],
+) -> None:
+    spawn_entries: list[tuple[str, float, float]] = [
+        ("default", float(spawn_x), float(spawn_y)),
+    ]
+    for i, warp in enumerate(map_warp_events):
+        warp_x = int_or_default(warp.get("x", 0), 0) * tile_size
+        warp_y = int_or_default(warp.get("y", 0), 0) * tile_size
+        spawn_entries.append((f"warp_{i}", float(warp_x), float(warp_y)))
+
+    encounter_entries: list[dict] = []
+
+    with output_path.open("wb") as stream:
+        stream.write(struct.pack("<4sI", b"PCMP", 1))
+        stream.write(struct.pack("<IIII", map_width, map_height, tile_size, tile_size))
+        stream.write(
+            struct.pack(
+                "<IIIIIII",
+                len(ground_layer_values),
+                len(cover_layer_values),
+                len(collision_rects),
+                len(warp_events),
+                len(encounter_entries),
+                len(npc_events),
+                len(spawn_entries),
+            )
+        )
+        stream.write(struct.pack("<ff", float(spawn_x), float(spawn_y)))
+
+        if ground_layer_values:
+            stream.write(struct.pack(f"<{len(ground_layer_values)}i", *ground_layer_values))
+        if cover_layer_values:
+            stream.write(struct.pack(f"<{len(cover_layer_values)}i", *cover_layer_values))
+
+        for x, y, w, h in collision_rects:
+            stream.write(struct.pack("<ffff", float(x), float(y), float(w), float(h)))
+
+        for warp in warp_events:
+            x = int_or_default(warp.get("x", 0), 0) * tile_size
+            y = int_or_default(warp.get("y", 0), 0) * tile_size
+            width = max(1, int_or_default(warp.get("width", 1), 1)) * tile_size
+            height = max(1, int_or_default(warp.get("height", 1), 1)) * tile_size
+            stream.write(struct.pack("<ffff", float(x), float(y), float(width), float(height)))
+
+            target_map = str(warp.get("dest_map", "")).strip()
+            target_spawn_id = str(warp.get("target_spawn_id", "")).strip()
+            required_direction = str(warp.get("required_direction", "")).strip().lower()
+            write_length_prefixed_string(stream, target_map)
+            write_length_prefixed_string(stream, target_spawn_id)
+            write_length_prefixed_string(stream, required_direction)
+
+            target_spawn_x = warp.get("target_spawn_x")
+            target_spawn_y = warp.get("target_spawn_y")
+            has_target_spawn = target_spawn_x is not None and target_spawn_y is not None
+            stream.write(struct.pack("<B", 1 if has_target_spawn else 0))
+            if has_target_spawn:
+                stream.write(struct.pack("<ff", float(target_spawn_x), float(target_spawn_y)))
+
+        for encounter in encounter_entries:
+            x = float(encounter.get("x", 0.0))
+            y = float(encounter.get("y", 0.0))
+            w = float(encounter.get("w", tile_size))
+            h = float(encounter.get("h", tile_size))
+            table_id = str(encounter.get("table_id", ""))
+            stream.write(struct.pack("<ffff", x, y, w, h))
+            write_length_prefixed_string(stream, table_id)
+
+        for npc in npc_events:
+            npc_x = float(int_or_default(npc.get("x", 0), 0) * tile_size)
+            npc_y = float(int_or_default(npc.get("y", 0), 0) * tile_size)
+            npc_w = float(max(1, int_or_default(npc.get("width", 1), 1)) * tile_size)
+            npc_h = float(max(1, int_or_default(npc.get("height", 1), 1)) * tile_size)
+            stream.write(struct.pack("<ffff", npc_x, npc_y, npc_w, npc_h))
+
+            write_length_prefixed_string(stream, str(npc.get("id", "")))
+            write_length_prefixed_string(stream, str(npc.get("script_id", "")))
+            write_length_prefixed_string(stream, str(npc.get("speaker", "")))
+            write_length_prefixed_string(stream, str(npc.get("dialogue", "")))
+            write_length_prefixed_string(stream, str(npc.get("facing", "")))
+            write_length_prefixed_string(stream, str(npc.get("sprite", "")))
+            write_length_prefixed_string(stream, str(npc.get("animation", "")))
+
+        for spawn_id, point_x, point_y in spawn_entries:
+            write_length_prefixed_string(stream, spawn_id)
+            stream.write(struct.pack("<ff", point_x, point_y))
 
 
 def colorize_object_sprite(indexed_sprite_path: Path, output_path: Path, palette_path: Path) -> None:
@@ -667,6 +973,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Import a FireRed map into PokemonCipher asset format")
     parser.add_argument("--firered-root", type=Path, default=Path(r"C:\Code\pokefirered"))
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--assets-root",
+        type=Path,
+        default=None,
+        help="Output assets root (defaults to <project-root>/assets).",
+    )
     parser.add_argument("--map-name", type=str, default="PalletTown", help="FireRed map directory name under data/maps")
     parser.add_argument("--map-slug", type=str, default=None, help="Output folder/file slug (defaults from map name)")
     parser.add_argument("--layout-id", type=str, default=None, help="Optional layout id override")
@@ -676,6 +988,7 @@ def main() -> None:
 
     firered_root = args.firered_root
     project_root = args.project_root
+    assets_root = args.assets_root if args.assets_root is not None else (project_root / "assets")
     map_name = args.map_name
     map_dir = firered_root / "data" / "maps" / map_name
     map_json_path = map_dir / "map.json"
@@ -805,7 +1118,7 @@ def main() -> None:
 
     map_slug = normalize_slug(args.map_slug or to_snake_case(map_json.get("name", map_name)))
 
-    assets_dir = project_root / "assets"
+    assets_dir = assets_root
     maps_dir = assets_dir / "maps"
     tilesets_dir = assets_dir / "tilesets"
     characters_dir = assets_dir / "characters"
@@ -819,7 +1132,21 @@ def main() -> None:
     tileset_output = tileset_output_dir / f"{map_slug}_tileset.png"
     organized_atlas.save(tileset_output)
 
-    warp_events = list(map_json.get("warp_events", []))
+    map_warp_events = [dict(warp) for warp in map_json.get("warp_events", [])]
+    annotate_target_spawn_ids(map_warp_events)
+    annotate_directional_stair_warps(
+        map_warp_events,
+        map_width,
+        map_height,
+        metatile_ids,
+        primary_attributes,
+        secondary_attributes,
+    )
+
+    warp_events = list(map_warp_events)
+    # FireRed warp events are traversable trigger tiles even when collision bits are set.
+    carve_warp_tiles_from_collision(blocked_tiles, map_width, map_height, map_warp_events)
+
     connection_warps = build_connection_warps(
         map_json.get("connections", []),
         map_width,
@@ -828,6 +1155,7 @@ def main() -> None:
         maps_dir,
     )
     warp_events.extend(connection_warps)
+    npc_events = build_oak_npc_events(map_json, map_name)
 
     collision_rects = merge_collision_runs(blocked_tiles, map_width, map_height, tile_size)
 
@@ -869,6 +1197,24 @@ def main() -> None:
         spawn_x,
         spawn_y,
         warp_events,
+        map_warp_events,
+        npc_events,
+    )
+
+    pcmap_output = map_output_dir / f"{map_slug}_map.pcmap"
+    write_pcmap(
+        pcmap_output,
+        map_width,
+        map_height,
+        tile_size,
+        ground_layer_values,
+        cover_layer_values,
+        collision_rects,
+        spawn_x,
+        spawn_y,
+        warp_events,
+        map_warp_events,
+        npc_events,
     )
 
     map_ground_image = render_layer_from_atlas(organized_atlas, ground_layer_values, map_width, map_height, tile_size)
@@ -880,7 +1226,7 @@ def main() -> None:
 
     colorize_object_sprite(
         firered_root / "graphics" / "object_events" / "pics" / "people" / "red_normal.png",
-        characters_dir / "red_normal.png",
+        characters_dir / "red" / "red_normal.png",
         firered_root / "graphics" / "object_events" / "palettes" / "player.pal",
     )
 
@@ -888,9 +1234,10 @@ def main() -> None:
 
     print(f"Imported FireRed map assets for {map_name}:")
     print(f"- {tmx_output}")
+    print(f"- {pcmap_output}")
     print(f"- {tileset_output}")
     print(f"- {map_composite_output}")
-    print(f"- {characters_dir / 'red_normal.png'}")
+    print(f"- {characters_dir / 'red' / 'red_normal.png'}")
     print(f"- {animations_dir / 'red_overworld.xml'}")
 
 

@@ -12,13 +12,16 @@ class TextureManager;
 
 enum class PartyMenuAction {
     None,
-    Closed
+    Closed,
+    OpenSummary
 };
 
 class PartyMenuOverlay {
 public:
     bool isOpen() const { return open_; }
+    int selectedIndex() const { return selectedIndex_; }
     void open(const std::vector<PartyPokemon>& party);
+    void setSelectedIndex(int selectedIndex, const std::vector<PartyPokemon>& party);
     void close();
     PartyMenuAction handleKey(SDL_Keycode key, std::vector<PartyPokemon>& party);
     void render(TextureManager& textureManager, int viewportWidth, int viewportHeight, const std::vector<PartyPokemon>& party) const;
@@ -36,6 +39,7 @@ private:
     void setPrompt(std::string text);
     static DisplayStats makeDisplayStats(const PartyPokemon& member);
     static const char* speciesNameForId(int speciesId);
+    static const char* speciesIconAssetPathForId(int speciesId);
 
     bool open_ = false;
     int selectedIndex_ = 0;

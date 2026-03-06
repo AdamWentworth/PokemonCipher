@@ -54,36 +54,38 @@
  </objectgroup>
  <objectgroup id="4" name="Player Spawn Points">
   <object id="1" name="default" x="96" y="112"><point/></object>
+  <object id="2" name="warp_0" x="96" y="192"><point/></object>
+  <object id="3" name="warp_1" x="112" y="192"><point/></object>
+  <object id="4" name="warp_2" x="80" y="192"><point/></object>
  </objectgroup>
  <objectgroup id="5" name="Warp Layer">
   <object id="1" x="96" y="192" width="16" height="16">
    <properties>
     <property name="target_map" value="MAP_PALLET_TOWN"/>
-    <property name="target_spawn_x" value="256"/>
-    <property name="target_spawn_y" value="224"/>
+    <property name="target_spawn_id" value="warp_2"/>
    </properties>
   </object>
   <object id="2" x="112" y="192" width="16" height="16">
    <properties>
     <property name="target_map" value="MAP_PALLET_TOWN"/>
-    <property name="target_spawn_x" value="256"/>
-    <property name="target_spawn_y" value="224"/>
+    <property name="target_spawn_id" value="warp_2"/>
    </properties>
   </object>
   <object id="3" x="80" y="192" width="16" height="16">
    <properties>
     <property name="target_map" value="MAP_PALLET_TOWN"/>
-    <property name="target_spawn_x" value="256"/>
-    <property name="target_spawn_y" value="224"/>
+    <property name="target_spawn_id" value="warp_2"/>
    </properties>
   </object>
  </objectgroup>
  <objectgroup id="6" name="NPC Layer">
-  <object id="1" name="prof_oak" x="96" y="48" width="16" height="16">
+  <object id="1" name="localid_oaks_lab_prof_oak" x="96" y="48" width="16" height="16">
    <properties>
-    <property name="script_id" value="oak_restore_eevee"/>
-    <property name="speaker" value="OAK"/>
+    <property name="script_id" value="oak_lab_eevee"/>
     <property name="facing" value="down"/>
+    <property name="speaker" value="PROF. OAK"/>
+    <property name="sprite" value="assets/characters/oak/oak_overworld.png"/>
+    <property name="animation" value="assets/animations/red_overworld.xml"/>
    </properties>
   </object>
  </objectgroup>

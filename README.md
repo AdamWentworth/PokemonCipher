@@ -52,30 +52,42 @@ Optional env vars:
 - `POKEMONCIPHER_MAP`
 - `POKEMONCIPHER_SPAWN`
 
-## Regenerate Pallet Town Assets
+## Asset Pipeline (Recommended)
 
-Requires Python and Pillow:
+Use the orchestrator to build normalized assets directly into canonical `assets/`:
 
-`python tools/import_firered_pallet.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher --map-name PalletTown`
+`python tools/build_assets.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher`
 
-You can import other maps by changing `--map-name` (and optionally `--map-slug`, `--layout-id`, `--spawn-tile-x`, `--spawn-tile-y`).
+Useful options:
+- `--no-with-maps` to skip map import stage
+- `--clean-assets` to wipe generated asset outputs before rebuilding
+- `--assets-root <path>` to target a different asset output folder
+- `--verify-manifest` to verify `assets/.build_manifest.json` against current import script hashes
 
-This generates:
-- `assets/maps/<map_slug>/<map_slug>_map.tmx`
-- `assets/maps/<map_slug>/<map_slug>_map_preview.png`
-- `assets/tilesets/<map_slug>/<map_slug>_tileset.png`
+Folders:
+- `assets_raw/`: raw extraction workspace (not runtime)
+- `assets/`: single source of truth for runtime assets
 
-## Regenerate FireRed Party Menu Assets
+Generated map cache:
+- Map imports now emit `*.tmx.pcmap` sidecar blobs.
+- Runtime prefers `.pcmap` for fast map loads and falls back to `.tmx` automatically.
 
-Requires Python and Pillow:
+### Runtime Tunables
 
-`python tools/import_firered_party_menu.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher`
+These are now data-driven and loaded at runtime from Lua config files:
+- `assets/config/maps/map_registry.lua`: map IDs, TMX paths, tileset paths, aliases
+- `assets/config/pokemon/species_registry.lua`: species names/types/abilities/move lists/icon+sprite paths
+- `assets/config/world/character_assets.lua`: player + NPC default sprite/animation paths and player draw scale
+- `assets/config/ui/party_menu_layout.lua`: party menu layout anchors/offsets
+- `assets/config/ui/pokemon_summary_layout.lua`: summary UI anchors/offsets/gauge positions
 
-This generates:
-- `assets/ui/party_menu/bg_full.png`
-- `assets/ui/party_menu/slot_main.png`
-- `assets/ui/party_menu/slot_wide.png`
-- `assets/ui/party_menu/slot_wide_empty.png`
-- `assets/ui/party_menu/cancel_button.png`
-- `assets/ui/party_menu/confirm_button.png`
-- `assets/ui/party_menu/pokeball_small.png`
+Source-controlled templates live in `assets/config/*`.
+
+## Individual Import Scripts
+
+All import scripts support `--assets-root` if you want to run a single stage.
+
+Examples:
+- `python tools/import_firered_pallet.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher --assets-root C:\Code\PokemonCipher\assets --map-name PalletTown`
+- `python tools/import_firered_party_menu.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher --assets-root C:\Code\PokemonCipher\assets`
+- `python tools/import_firered_summary_assets.py --firered-root C:\Code\pokefirered --project-root C:\Code\PokemonCipher --assets-root C:\Code\PokemonCipher\assets`

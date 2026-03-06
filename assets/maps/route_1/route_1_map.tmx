@@ -186,14 +186,7 @@
  <objectgroup id="4" name="Player Spawn Points">
   <object id="1" name="default" x="192" y="304"><point/></object>
  </objectgroup>
- <objectgroup id="5" name="Encounter Layer">
-  <object id="1" x="160" y="96" width="192" height="224">
-   <properties>
-    <property name="encounter_table" value="route_1_grass"/>
-   </properties>
-  </object>
- </objectgroup>
- <objectgroup id="6" name="Warp Layer">
+ <objectgroup id="5" name="Warp Layer">
   <object id="1" x="0" y="624" width="384" height="16">
    <properties>
     <property name="target_map" value="MAP_PALLET_TOWN"/>
@@ -201,5 +194,7 @@
     <property name="target_spawn_y" value="16"/>
    </properties>
   </object>
+ </objectgroup>
+ <objectgroup id="6" name="NPC Layer">
  </objectgroup>
 </map>

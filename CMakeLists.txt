@@ -35,10 +35,17 @@ add_executable(PokemonCipher
   src/game/encounters/WildEncounterService.cpp
   src/game/scripting/LuaOverworldScriptLoader.cpp
   src/game/save/SaveGameStorage.cpp
+  src/game/data/SpeciesRegistry.cpp
   src/game/ui/DialogueOverlay.cpp
+  src/game/ui/FrlgTextRenderer.cpp
+  src/game/ui/PartyMenuLayout.cpp
   src/game/ui/PartyMenuOverlay.cpp
+  src/game/ui/PokemonSummaryLayout.cpp
+  src/game/ui/PokemonSummaryOverlay.cpp
   src/game/ui/StartMenuOverlay.cpp
   src/game/world/DefaultMapRegistry.cpp
+  src/game/world/MapRegistryLoader.cpp
+  src/game/world/OverworldCharacterAssets.cpp
   src/game/world/OverworldEntityFactory.cpp
 
   src/engine/manager/AssetManager.cpp
@@ -68,6 +75,7 @@ else()
 endif()
 
 set(ASSETS_SRC "${CMAKE_SOURCE_DIR}/assets")
+message(STATUS "PokemonCipher assets source: assets")
 add_custom_command(TARGET PokemonCipher POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${ASSETS_SRC}"

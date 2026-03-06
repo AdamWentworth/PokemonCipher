@@ -11,6 +11,9 @@
 struct WarpPoint {
     SDL_FRect area{};
     std::string targetMap;
+    std::string targetSpawnId;
+    std::string requiredDirection;
+    bool hasTargetSpawn = false;
     Vector2D targetSpawn{};
 };
 

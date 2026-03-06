@@ -1,15 +1,18 @@
 #include "game/ui/PartyMenuOverlay.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <utility>
 
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_timer.h>
 
 #include "engine/TextureManager.h"
+#include "game/data/SpeciesRegistry.h"
+#include "game/ui/PartyMenuLayout.h"
 
 namespace {
 constexpr int kCommandSummary = 0;
@@ -23,31 +26,7 @@ constexpr const char* kAssetSlotWideEmpty = "assets/ui/party_menu/slot_wide_empt
 constexpr const char* kAssetCancelButton = "assets/ui/party_menu/cancel_button.png";
 constexpr const char* kAssetPokeballSmall = "assets/ui/party_menu/pokeball_small.png";
 
-constexpr float kDesignWidth = 240.0f;
-constexpr float kDesignHeight = 160.0f;
-
-constexpr std::array<SDL_FRect, 6> kSlotRects = {
-    SDL_FRect{8.0f, 24.0f, 80.0f, 56.0f},
-    SDL_FRect{96.0f, 8.0f, 136.0f, 24.0f},
-    SDL_FRect{96.0f, 32.0f, 136.0f, 24.0f},
-    SDL_FRect{96.0f, 56.0f, 136.0f, 24.0f},
-    SDL_FRect{96.0f, 80.0f, 136.0f, 24.0f},
-    SDL_FRect{96.0f, 104.0f, 136.0f, 24.0f},
-};
-
-// FireRed single-party layout coordinates for the pokeball indicator sprite.
-constexpr std::array<SDL_FPoint, 6> kPokeballPositions = {
-    SDL_FPoint{16.0f, 34.0f},
-    SDL_FPoint{102.0f, 25.0f},
-    SDL_FPoint{102.0f, 49.0f},
-    SDL_FPoint{102.0f, 73.0f},
-    SDL_FPoint{102.0f, 97.0f},
-    SDL_FPoint{102.0f, 121.0f},
-};
-
-constexpr SDL_FRect kMessageRect{8.0f, 128.0f, 160.0f, 24.0f};
-constexpr SDL_FRect kCancelRect{176.0f, 128.0f, 56.0f, 24.0f};
-constexpr SDL_FRect kCommandRect{176.0f, 82.0f, 56.0f, 42.0f};
+const PartyMenuLayout& partyMenuLayout();
 
 const char* commandLabel(const int index) {
     switch (index) {
@@ -81,7 +60,21 @@ float mapX(const float x, const float scale, const float offsetX) {
 }
 
 float mapY(const float y, const float scale, const float offsetY) {
-    return offsetY + (y * scale);
+    return offsetY + ((y + partyMenuLayout().textBaselineYOffset) * scale);
+}
+
+const PartyMenuLayout& partyMenuLayout() {
+    static const PartyMenuLayout layout = []() {
+        PartyMenuLayout loaded = makeDefaultPartyMenuLayout();
+        std::string error;
+        if (!loadPartyMenuLayoutFromLuaFile("assets/config/ui/party_menu_layout.lua", loaded, error) &&
+            !error.empty()) {
+            std::cout << "Party menu layout config load failed; using defaults: " << error << '\n';
+        }
+        return loaded;
+    }();
+
+    return layout;
 }
 } // namespace
 
@@ -103,6 +96,20 @@ void PartyMenuOverlay::open(const std::vector<PartyPokemon>& party) {
         lastRightColumnIndex_ = selectedIndex_;
     } else if (count > 1) {
         lastRightColumnIndex_ = std::clamp(lastRightColumnIndex_, 1, count - 1);
+    }
+}
+
+void PartyMenuOverlay::setSelectedIndex(const int selectedIndex, const std::vector<PartyPokemon>& party) {
+    const int count = partyCount(party);
+    if (count <= 0) {
+        selectedIndex_ = 0;
+        lastRightColumnIndex_ = 1;
+        return;
+    }
+
+    selectedIndex_ = std::clamp(selectedIndex, 0, count - 1);
+    if (selectedIndex_ > 0) {
+        lastRightColumnIndex_ = selectedIndex_;
     }
 }
 
@@ -159,12 +166,9 @@ PartyMenuAction PartyMenuOverlay::handleKey(const SDL_Keycode key, std::vector<P
         }
 
         if (commandMenuIndex_ == kCommandSummary) {
-            std::ostringstream message;
-            message << speciesNameForId(party[static_cast<std::size_t>(selectedIndex_)].speciesId)
-                    << " summary not implemented yet.";
-            setPrompt(message.str());
             commandMenuOpen_ = false;
-            return PartyMenuAction::None;
+            setPrompt("Choose a POKEMON.");
+            return PartyMenuAction::OpenSummary;
         }
 
         if (commandMenuIndex_ == kCommandSwitch) {
@@ -231,11 +235,12 @@ void PartyMenuOverlay::render(
         return;
     }
 
-    const float scaleX = static_cast<float>(viewportWidth) / kDesignWidth;
-    const float scaleY = static_cast<float>(viewportHeight) / kDesignHeight;
+    const PartyMenuLayout& layout = partyMenuLayout();
+    const float scaleX = static_cast<float>(viewportWidth) / layout.designWidth;
+    const float scaleY = static_cast<float>(viewportHeight) / layout.designHeight;
     const float scale = std::max(0.01f, std::min(scaleX, scaleY));
-    const float contentWidth = kDesignWidth * scale;
-    const float contentHeight = kDesignHeight * scale;
+    const float contentWidth = layout.designWidth * scale;
+    const float contentHeight = layout.designHeight * scale;
     const float offsetX = (static_cast<float>(viewportWidth) - contentWidth) * 0.5f;
     const float offsetY = (static_cast<float>(viewportHeight) - contentHeight) * 0.5f;
 
@@ -275,7 +280,7 @@ void PartyMenuOverlay::render(
         const bool filled = i < count;
         const bool selected = i == selectedIndex_;
         const bool switchSource = switchMode_ && i == switchSourceIndex_;
-        const SDL_FRect& designRect = kSlotRects[static_cast<std::size_t>(i)];
+        const SDL_FRect& designRect = layout.slotRects[static_cast<std::size_t>(i)];
 
         if (i == 0) {
             if (!drawDesignTexture(mainSlotTexture, designRect)) {
@@ -318,14 +323,18 @@ void PartyMenuOverlay::render(
         const DisplayStats stats = makeDisplayStats(member);
         const float baseX = designRect.x;
         const float baseY = designRect.y;
-        const float textY = (i == 0) ? (baseY + 8.0f) : (baseY + 3.0f);
+        const float textY = (i == 0) ? (baseY + layout.nameTextMainYOffset) : (baseY + layout.nameTextOtherYOffset);
 
-        if (pokeballTexture) {
+        const char* iconAssetPath = speciesIconAssetPathForId(member.speciesId);
+        SDL_Texture* iconTexture = iconAssetPath ? textureManager.load(iconAssetPath) : nullptr;
+        const bool hasSpeciesIcon = iconTexture != nullptr;
+
+        if (pokeballTexture && !hasSpeciesIcon) {
             SDL_FRect src{0.0f, selected ? 16.0f : 0.0f, 16.0f, 16.0f};
             SDL_FRect dst = mapToViewport(
                 SDL_FRect{
-                    kPokeballPositions[static_cast<std::size_t>(i)].x,
-                    kPokeballPositions[static_cast<std::size_t>(i)].y,
+                    layout.pokeballPositions[static_cast<std::size_t>(i)].x - 8.0f,
+                    layout.pokeballPositions[static_cast<std::size_t>(i)].y - 8.0f,
                     16.0f,
                     16.0f
                 },
@@ -336,10 +345,27 @@ void PartyMenuOverlay::render(
             SDL_RenderTexture(renderer, pokeballTexture, &src, &dst);
         }
 
+        if (iconTexture) {
+            const int iconFrame = static_cast<int>((SDL_GetTicks() / 300) % 2);
+            const SDL_FRect src{0.0f, static_cast<float>(iconFrame * 32), 32.0f, 32.0f};
+            SDL_FRect dst = mapToViewport(
+                SDL_FRect{
+                    layout.pokemonIconPositions[static_cast<std::size_t>(i)].x - 16.0f,
+                    layout.pokemonIconPositions[static_cast<std::size_t>(i)].y - 16.0f,
+                    32.0f,
+                    32.0f
+                },
+                scale,
+                offsetX,
+                offsetY
+            );
+            SDL_RenderTexture(renderer, iconTexture, &src, &dst);
+        }
+
         SDL_SetRenderDrawColor(renderer, 34, 37, 44, 255);
         SDL_RenderDebugText(
             renderer,
-            mapX(baseX + 22.0f, scale, offsetX),
+            mapX(baseX + layout.nameTextOffsetX, scale, offsetX),
             mapY(textY, scale, offsetY),
             speciesNameForId(member.speciesId)
         );
@@ -348,22 +374,22 @@ void PartyMenuOverlay::render(
         levelText << "Lv" << member.level;
         SDL_RenderDebugText(
             renderer,
-            mapX(baseX + (i == 0 ? 32.0f : 52.0f), scale, offsetX),
-            mapY(textY + (i == 0 ? 10.0f : 0.0f), scale, offsetY),
+            mapX(baseX + (i == 0 ? layout.levelTextMainX : layout.levelTextOtherX), scale, offsetX),
+            mapY(textY + (i == 0 ? layout.levelTextMainYOffset : layout.levelTextOtherYOffset), scale, offsetY),
             levelText.str().c_str()
         );
 
-        const float barX = baseX + (i == 0 ? 24.0f : 88.0f);
-        const float barY = baseY + (i == 0 ? 36.0f : 11.0f);
-        const float barW = 48.0f;
+        const float barX = baseX + (i == 0 ? layout.hpBarMainX : layout.hpBarOtherX);
+        const float barY = baseY + (i == 0 ? layout.hpBarMainY : layout.hpBarOtherY);
+        const float barW = layout.hpBarWidth;
         const float hpRatio = std::clamp(static_cast<float>(stats.hp) / static_cast<float>(stats.maxHp), 0.0f, 1.0f);
         const float fillW = std::max(1.0f, std::round(barW * hpRatio));
 
-        SDL_FRect hpBack = mapToViewport(SDL_FRect{barX, barY, barW, 3.0f}, scale, offsetX, offsetY);
+        SDL_FRect hpBack = mapToViewport(SDL_FRect{barX, barY, barW, layout.hpBarHeight}, scale, offsetX, offsetY);
         SDL_SetRenderDrawColor(renderer, 48, 56, 70, 255);
         SDL_RenderFillRect(renderer, &hpBack);
 
-        SDL_FRect hpFill = mapToViewport(SDL_FRect{barX, barY, fillW, 3.0f}, scale, offsetX, offsetY);
+        SDL_FRect hpFill = mapToViewport(SDL_FRect{barX, barY, fillW, layout.hpBarHeight}, scale, offsetX, offsetY);
         if (hpRatio > 0.5f) {
             SDL_SetRenderDrawColor(renderer, 88, 200, 104, 255);
         } else if (hpRatio > 0.2f) {
@@ -378,8 +404,8 @@ void PartyMenuOverlay::render(
         SDL_SetRenderDrawColor(renderer, 34, 37, 44, 255);
         SDL_RenderDebugText(
             renderer,
-            mapX(baseX + (i == 0 ? 38.0f : 100.0f), scale, offsetX),
-            mapY(baseY + (i == 0 ? 42.0f : 13.0f), scale, offsetY),
+            mapX(baseX + (i == 0 ? layout.hpTextMainX : layout.hpTextOtherX), scale, offsetX),
+            mapY(baseY + (i == 0 ? layout.hpTextMainY : layout.hpTextOtherY), scale, offsetY),
             hpText.str().c_str()
         );
 
@@ -394,14 +420,14 @@ void PartyMenuOverlay::render(
         }
     }
 
-    const SDL_FRect messageRect = mapToViewport(kMessageRect, scale, offsetX, offsetY);
+    const SDL_FRect messageRect = mapToViewport(layout.messageRect, scale, offsetX, offsetY);
     SDL_SetRenderDrawColor(renderer, 20, 24, 32, 228);
     SDL_RenderFillRect(renderer, &messageRect);
     SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
     SDL_RenderRect(renderer, &messageRect);
 
-    if (!drawDesignTexture(cancelButtonTexture, kCancelRect)) {
-        const SDL_FRect cancelRect = mapToViewport(kCancelRect, scale, offsetX, offsetY);
+    if (!drawDesignTexture(cancelButtonTexture, layout.cancelRect)) {
+        const SDL_FRect cancelRect = mapToViewport(layout.cancelRect, scale, offsetX, offsetY);
         SDL_SetRenderDrawColor(renderer, 20, 24, 32, 228);
         SDL_RenderFillRect(renderer, &cancelRect);
         SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
@@ -412,15 +438,15 @@ void PartyMenuOverlay::render(
     if (count <= 0) {
         SDL_RenderDebugText(
             renderer,
-            mapX(kMessageRect.x + 6.0f, scale, offsetX),
-            mapY(kMessageRect.y + 8.0f, scale, offsetY),
+            mapX(layout.messageRect.x + layout.promptTextXOffset, scale, offsetX),
+            mapY(layout.messageRect.y + layout.promptTextYOffset, scale, offsetY),
             "No POKEMON. Press X to close."
         );
     } else {
         SDL_RenderDebugText(
             renderer,
-            mapX(kMessageRect.x + 6.0f, scale, offsetX),
-            mapY(kMessageRect.y + 8.0f, scale, offsetY),
+            mapX(layout.messageRect.x + layout.promptTextXOffset, scale, offsetX),
+            mapY(layout.messageRect.y + layout.promptTextYOffset, scale, offsetY),
             promptText_.c_str()
         );
     }
@@ -429,21 +455,21 @@ void PartyMenuOverlay::render(
         return;
     }
 
-    const SDL_FRect commandRect = mapToViewport(kCommandRect, scale, offsetX, offsetY);
+    const SDL_FRect commandRect = mapToViewport(layout.commandRect, scale, offsetX, offsetY);
     SDL_SetRenderDrawColor(renderer, 20, 24, 32, 236);
     SDL_RenderFillRect(renderer, &commandRect);
     SDL_SetRenderDrawColor(renderer, 232, 232, 232, 255);
     SDL_RenderRect(renderer, &commandRect);
 
     for (int i = 0; i < 3; ++i) {
-        const float y = kCommandRect.y + 6.0f + (10.0f * static_cast<float>(i));
+        const float y = layout.commandRect.y + layout.commandLineStartYOffset + (layout.commandLineStep * static_cast<float>(i));
         if (i == commandMenuIndex_) {
             SDL_SetRenderDrawColor(renderer, 255, 231, 128, 255);
-            SDL_RenderDebugText(renderer, mapX(kCommandRect.x + 4.0f, scale, offsetX), mapY(y, scale, offsetY), ">");
-            SDL_RenderDebugText(renderer, mapX(kCommandRect.x + 12.0f, scale, offsetX), mapY(y, scale, offsetY), commandLabel(i));
+            SDL_RenderDebugText(renderer, mapX(layout.commandRect.x + layout.commandArrowXOffset, scale, offsetX), mapY(y, scale, offsetY), ">");
+            SDL_RenderDebugText(renderer, mapX(layout.commandRect.x + layout.commandLabelXOffset, scale, offsetX), mapY(y, scale, offsetY), commandLabel(i));
         } else {
             SDL_SetRenderDrawColor(renderer, 245, 245, 245, 255);
-            SDL_RenderDebugText(renderer, mapX(kCommandRect.x + 12.0f, scale, offsetX), mapY(y, scale, offsetY), commandLabel(i));
+            SDL_RenderDebugText(renderer, mapX(layout.commandRect.x + layout.commandLabelXOffset, scale, offsetX), mapY(y, scale, offsetY), commandLabel(i));
         }
     }
 }
@@ -487,14 +513,21 @@ PartyMenuOverlay::DisplayStats PartyMenuOverlay::makeDisplayStats(const PartyPok
 }
 
 const char* PartyMenuOverlay::speciesNameForId(const int speciesId) {
-    switch (speciesId) {
-    case 16:
-        return "PIDGEY";
-    case 19:
-        return "RATTATA";
-    case 133:
-        return "EEVEE";
-    default:
-        return "POKEMON";
+    if (const SpeciesDefinition* species = getSpeciesRegistry().find(speciesId)) {
+        if (!species->name.empty()) {
+            return species->name.c_str();
+        }
     }
+
+    return "POKEMON";
+}
+
+const char* PartyMenuOverlay::speciesIconAssetPathForId(const int speciesId) {
+    if (const SpeciesDefinition* species = getSpeciesRegistry().find(speciesId)) {
+        if (!species->iconPath.empty()) {
+            return species->iconPath.c_str();
+        }
+    }
+
+    return nullptr;
 }

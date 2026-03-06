@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="13" height="10" tilewidth="16" tileheight="16" infinite="0">
+ <tileset firstgid="1" name="pallet_town_rivals_house" tilewidth="16" tileheight="16" tilecount="57" columns="16">
+  <image source="../../tilesets/pallet_town_rivals_house/pallet_town_rivals_house_tileset.png" width="256" height="64"/>
+ </tileset>
+ <layer id="1" name="Terrain Layer" width="13" height="10">
+  <data encoding="csv">
+10,10,19,20,10,18,11,12,10,53,10,16,17,
+21,22,26,27,13,25,14,15,13,54,13,23,24,
+28,29,33,34,3,32,3,3,3,3,3,30,31,
+3,1,1,1,35,36,36,36,36,37,1,1,1,
+3,1,1,1,44,39,40,41,42,47,1,1,1,
+3,1,1,1,44,39,45,46,42,47,1,1,1,
+3,1,1,1,49,50,50,50,50,51,1,1,1,
+48,1,1,1,1,1,1,1,1,1,1,1,38,
+52,1,1,4,5,6,1,1,1,1,1,1,43,
+2,2,2,7,8,9,2,2,2,2,2,2,2
+</data>
+ </layer>
+ <layer id="2" name="Cover Layer" width="13" height="10">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+57,0,0,0,0,0,0,0,0,0,0,0,56,
+0,0,0,0,0,0,0,0,0,0,0,0,0,
+55,55,55,0,0,0,55,55,55,55,55,55,55
+</data>
+ </layer>
+ <objectgroup id="3" name="Collision Layer">
+  <object id="1" x="0" y="0" width="208" height="16"/>
+  <object id="2" x="0" y="16" width="208" height="16"/>
+  <object id="3" x="96" y="64" width="32" height="16"/>
+  <object id="4" x="96" y="80" width="32" height="16"/>
+  <object id="5" x="0" y="128" width="16" height="16"/>
+  <object id="6" x="192" y="128" width="16" height="16"/>
+  <object id="7" x="0" y="144" width="208" height="16"/>
+ </objectgroup>
+ <objectgroup id="4" name="Player Spawn Points">
+  <object id="1" name="default" x="80" y="80"><point/></object>
+  <object id="2" name="warp_0" x="64" y="128"><point/></object>
+  <object id="3" name="warp_1" x="80" y="128"><point/></object>
+  <object id="4" name="warp_2" x="48" y="128"><point/></object>
+ </objectgroup>
+ <objectgroup id="5" name="Warp Layer">
+  <object id="1" x="64" y="128" width="16" height="16">
+   <properties>
+    <property name="target_map" value="MAP_PALLET_TOWN"/>
+    <property name="target_spawn_id" value="warp_1"/>
+   </properties>
+  </object>
+  <object id="2" x="80" y="128" width="16" height="16">
+   <properties>
+    <property name="target_map" value="MAP_PALLET_TOWN"/>
+    <property name="target_spawn_id" value="warp_1"/>
+   </properties>
+  </object>
+  <object id="3" x="48" y="128" width="16" height="16">
+   <properties>
+    <property name="target_map" value="MAP_PALLET_TOWN"/>
+    <property name="target_spawn_id" value="warp_1"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="6" name="NPC Layer">
+ </objectgroup>
+</map>

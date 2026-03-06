@@ -1,6 +1,11 @@
 #include "game/world/DefaultMapRegistry.h"
 
-MapRegistry buildDefaultMapRegistry() {
+#include <iostream>
+
+#include "game/world/MapRegistryLoader.h"
+
+namespace {
+MapRegistry buildFallbackMapRegistry() {
     MapRegistry mapRegistry;
 
     MapDefinition palletTown{};
@@ -32,4 +37,19 @@ MapRegistry buildDefaultMapRegistry() {
     mapRegistry.addAlias("map_pallet_town_professor_oaks_lab", "pallet_town_professor_oaks_lab");
 
     return mapRegistry;
+}
+} // namespace
+
+MapRegistry buildDefaultMapRegistry() {
+    MapRegistry dataDrivenRegistry;
+    std::string error;
+    if (loadMapRegistryFromLuaFile("assets/config/maps/map_registry.lua", dataDrivenRegistry, error)) {
+        return dataDrivenRegistry;
+    }
+
+    if (!error.empty()) {
+        std::cout << "Map registry config load failed; using fallback: " << error << '\n';
+    }
+
+    return buildFallbackMapRegistry();
 }

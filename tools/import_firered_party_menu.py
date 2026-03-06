@@ -85,13 +85,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Import FireRed party menu graphics for PokemonCipher.")
     parser.add_argument("--firered-root", type=Path, default=Path(r"C:\Code\pokefirered"))
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--assets-root",
+        type=Path,
+        default=None,
+        help="Output assets root (defaults to <project-root>/assets).",
+    )
     args = parser.parse_args()
 
     firered_root = args.firered_root
     project_root = args.project_root
+    assets_root = args.assets_root if args.assets_root is not None else (project_root / "assets")
 
     source_dir = firered_root / "graphics" / "party_menu"
-    output_dir = project_root / "assets" / "ui" / "party_menu"
+    output_dir = assets_root / "ui" / "party_menu"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     bg_tilesheet = Image.open(source_dir / "bg.png").convert("RGBA")

@@ -3,10 +3,12 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <iostream>
 #include <string>
 
 #include "engine/ecs/Component.h"
 #include "engine/manager/AssetManager.h"
+#include "game/world/OverworldCharacterAssets.h"
 
 namespace {
 std::string normalizeFacing(std::string facing) {
@@ -19,6 +21,19 @@ std::string normalizeFacing(std::string facing) {
     }
 
     return facing;
+}
+
+const OverworldCharacterAssets& overworldCharacterAssets() {
+    static const OverworldCharacterAssets assets = []() {
+        OverworldCharacterAssets loaded = makeDefaultOverworldCharacterAssets();
+        std::string error;
+        if (!loadOverworldCharacterAssetsFromLuaFile("assets/config/world/character_assets.lua", loaded, error) &&
+            !error.empty()) {
+            std::cout << "Overworld character config load failed; using defaults: " << error << '\n';
+        }
+        return loaded;
+    }();
+    return assets;
 }
 } // namespace
 
@@ -53,16 +68,17 @@ void createNpcEntities(World& world, const Map& map, TextureManager& textureMana
         return;
     }
 
-    constexpr const char* kDefaultAnimationPath = "assets/animations/red_overworld.xml";
-    constexpr const char* kDefaultSpritePath = "assets/characters/oak/oak_overworld.png";
-    constexpr const char* kNpcAnimationKey = "npc_default";
+    const OverworldCharacterAssets& assets = overworldCharacterAssets();
+    const std::string& defaultAnimationPath = assets.npcDefaultAnimationPath;
+    const std::string& defaultSpritePath = assets.npcDefaultSpritePath;
+    const std::string& npcAnimationKey = assets.npcAnimationKey;
 
-    if (!AssetManager::hasAnimation(kNpcAnimationKey)) {
-        AssetManager::loadAnimation(kNpcAnimationKey, kDefaultAnimationPath);
+    if (!AssetManager::hasAnimation(npcAnimationKey)) {
+        AssetManager::loadAnimation(npcAnimationKey, defaultAnimationPath.c_str());
     }
 
-    const Animation npcAnimation = AssetManager::getAnimation(kNpcAnimationKey);
-    SDL_Texture* defaultNpcTexture = textureManager.load(kDefaultSpritePath);
+    const Animation npcAnimation = AssetManager::getAnimation(npcAnimationKey);
+    SDL_Texture* defaultNpcTexture = textureManager.load(defaultSpritePath);
 
     for (const NpcSpawn& npcSpawn : map.npcSpawns) {
         Entity& npc = world.createEntity();
@@ -115,8 +131,10 @@ void createNpcEntities(World& world, const Map& map, TextureManager& textureMana
 }
 
 void createPlayerEntity(World& world, const Map& map, const Vector2D& spawnPoint, TextureManager& textureManager) {
+    const OverworldCharacterAssets& assets = overworldCharacterAssets();
+
     if (!AssetManager::hasAnimation("player")) {
-        AssetManager::loadAnimation("player", "assets/animations/wes_overworld.xml");
+        AssetManager::loadAnimation("player", assets.playerAnimationPath.c_str());
     }
 
     Entity& player = world.createEntity();
@@ -137,9 +155,7 @@ void createPlayerEntity(World& world, const Map& map, const Vector2D& spawnPoint
         src = clipIt->second.frameIndices[0];
     }
 
-    constexpr float kBaseDrawHeight = 32.0f;
-    constexpr float kDrawScale = 0.704f;
-    const float drawHeight = std::round(kBaseDrawHeight * kDrawScale);
+    const float drawHeight = std::round(assets.playerBaseDrawHeight * assets.playerDrawScale);
     float drawWidth = 16.0f;
     if (src.w > 0.0f && src.h > 0.0f) {
         drawWidth = std::round((src.w / src.h) * drawHeight);
@@ -147,7 +163,7 @@ void createPlayerEntity(World& world, const Map& map, const Vector2D& spawnPoint
     drawWidth = std::max(1.0f, drawWidth);
 
     SDL_FRect dst{transform.position.x, transform.position.y, drawWidth, drawHeight};
-    auto& sprite = player.addComponent<Sprite>(textureManager.load("assets/characters/wes/wes_overworld.png"), src, dst);
+    auto& sprite = player.addComponent<Sprite>(textureManager.load(assets.playerSpritePath), src, dst);
     const float verticalOffset = std::round(-(drawHeight - static_cast<float>(map.tileHeight)));
     sprite.offset = Vector2D((static_cast<float>(map.tileWidth) - drawWidth) * 0.5f, verticalOffset);
     sprite.mirrorOnRightClip = true;

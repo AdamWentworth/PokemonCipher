@@ -1,5 +1,6 @@
 build/
 .agents/
+assets_raw/fire_red/
 
 # IDE / local editor state
 .vs/
@@ -15,3 +16,10 @@ CMakeFiles/
 # Python cache for tooling scripts
 __pycache__/
 *.pyc
+
+# Local scratch / debug render artifacts
+tmp_assets/
+assets/ui/summary_screen/_tmp_preview_*.png
+assets/ui/summary_screen/_debug_*.png
+assets/ui/summary_screen/*_debug.png
+assets/ui/summary_screen/tmp_*.png

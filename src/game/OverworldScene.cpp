@@ -43,14 +43,31 @@ void OverworldScene::handleEvent(const SDL_Event& event) {
         return;
     }
 
+    if (!debugConsoleOpen_ && isWarpTransitionActive()) {
+        return;
+    }
+
     if (!debugConsoleOpen_ && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
         const SDL_Keycode key = event.key.key;
+        if (pokemonSummaryOverlay_.isOpen()) {
+            const PokemonSummaryAction summaryAction = pokemonSummaryOverlay_.handleKey(key, gameState_.party());
+            if (summaryAction == PokemonSummaryAction::Closed) {
+                partyMenuOverlay_.setSelectedIndex(pokemonSummaryOverlay_.selectedIndex(), gameState_.party());
+                refreshInputState();
+            }
+            return;
+        }
+
         if (partyMenuOverlay_.isOpen()) {
             const PartyMenuAction partyAction = partyMenuOverlay_.handleKey(key, gameState_.party());
             if (partyAction == PartyMenuAction::Closed) {
                 startMenuOverlay_.open();
                 startMenuOverlay_.clearStatusText();
                 refreshInputState();
+            } else if (partyAction == PartyMenuAction::OpenSummary) {
+                pokemonSummaryOverlay_.open(gameState_.party(), partyMenuOverlay_.selectedIndex());
+                refreshInputState();
+                printConsole("Party menu: summary opened.");
             }
             return;
         }
@@ -217,6 +234,11 @@ void OverworldScene::update(const float dt) {
         }
     };
     scriptRunner_.update(dt, scriptRuntime);
+    updateWarpTransition(dt);
+    if (isWarpTransitionActive()) {
+        world_.updateCamera();
+        return;
+    }
 
     gridMovementSystem_.update(world_.entities(), dt);
     world_.update(dt);
@@ -243,6 +265,8 @@ void OverworldScene::render() {
     dialogueOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
     startMenuOverlay_.render(textureManager_.renderer(), viewportWidth_, viewportHeight_);
     partyMenuOverlay_.render(textureManager_, viewportWidth_, viewportHeight_, gameState_.party());
+    pokemonSummaryOverlay_.render(textureManager_, viewportWidth_, viewportHeight_, gameState_.party());
+    renderWarpTransitionOverlay();
     renderDevConsoleOverlay();
 }
 

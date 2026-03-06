@@ -101,6 +101,7 @@ def clean_generated_assets(assets_root: Path) -> None:
         assets_root / "tilesets",
         assets_root / "pokemon" / "eevee",
         assets_root / "characters" / "red" / "red_normal.png",
+        assets_root / "effects" / "tall_grass_rustle.png",
         assets_root / "animations" / "red_overworld.xml",
         assets_root / ".build_manifest.json",
     ]
@@ -116,6 +117,8 @@ def compute_input_hashes(
     with_maps: bool,
 ) -> dict[str, str]:
     candidate_paths: list[Path] = [project_root / "tools" / "build_assets.py"]
+    importer_module_paths = sorted((project_root / "tools" / "firered_import").glob("*.py"))
+    candidate_paths.extend(importer_module_paths)
 
     if with_summary:
         candidate_paths.append(project_root / "tools" / "import_firered_summary_assets.py")

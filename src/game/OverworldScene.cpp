@@ -32,6 +32,7 @@ OverworldScene::OverworldScene(
         std::cout << "Failed to load initial map id: " << initialMapId << '\n';
     }
 
+    tallGrassRustleTexture_ = textureManager_.load("assets/effects/tall_grass_rustle.png");
     registerDefaultScripts();
     createDevConsole();
     refreshInputState();
@@ -245,6 +246,7 @@ void OverworldScene::update(const float dt) {
     OverworldEntityFactory::resolvePlayerWallCollisions(world_);
     checkMapWarps(dt);
     checkEncounterZones(dt);
+    updateTallGrassRustles(dt);
     world_.updateCamera();
 }
 
@@ -256,6 +258,10 @@ void OverworldScene::render() {
     }
 
     world_.render(textureManager_);
+    if (cameraEntity) {
+        const auto& camera = cameraEntity->getComponent<Camera>();
+        renderTallGrassRustles(camera);
+    }
 
     if (cameraEntity) {
         const auto& camera = cameraEntity->getComponent<Camera>();

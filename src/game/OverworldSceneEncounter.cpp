@@ -13,6 +13,9 @@
 namespace {
 constexpr float kEncounterCooldownOnTriggerSeconds = 0.25f;
 constexpr float kEncounterCooldownOnBlockedSeconds = 0.06f;
+constexpr float kTallGrassRustleFrameSeconds = 0.05f;
+constexpr int kTallGrassRustleFrameCount = 5;
+constexpr std::size_t kMaxTallGrassRustles = 12;
 
 std::mt19937& encounterRng() {
     static std::mt19937 rng{std::random_device{}()};
@@ -32,6 +35,75 @@ bool isInEncounterZone(const SDL_FRect& playerCollider, const Map& map, std::str
     return false;
 }
 } // namespace
+
+void OverworldScene::spawnTallGrassRustle(const int tileX, const int tileY) {
+    if (!tallGrassRustleTexture_ || map_.tileWidth <= 0 || map_.tileHeight <= 0) {
+        return;
+    }
+
+    TallGrassRustle rustle{};
+    rustle.tileX = tileX;
+    rustle.tileY = tileY;
+    rustle.elapsedSeconds = 0.0f;
+    rustle.durationSeconds = static_cast<float>(kTallGrassRustleFrameCount) * kTallGrassRustleFrameSeconds;
+    tallGrassRustles_.push_back(rustle);
+
+    if (tallGrassRustles_.size() > kMaxTallGrassRustles) {
+        const std::size_t overflow = tallGrassRustles_.size() - kMaxTallGrassRustles;
+        tallGrassRustles_.erase(tallGrassRustles_.begin(), tallGrassRustles_.begin() + overflow);
+    }
+}
+
+void OverworldScene::updateTallGrassRustles(const float dt) {
+    if (tallGrassRustles_.empty()) {
+        return;
+    }
+
+    const float clampedDt = std::max(0.0f, dt);
+    for (TallGrassRustle& rustle : tallGrassRustles_) {
+        rustle.elapsedSeconds += clampedDt;
+    }
+
+    tallGrassRustles_.erase(
+        std::remove_if(
+            tallGrassRustles_.begin(),
+            tallGrassRustles_.end(),
+            [](const TallGrassRustle& rustle) {
+                return rustle.elapsedSeconds >= rustle.durationSeconds;
+            }
+        ),
+        tallGrassRustles_.end()
+    );
+}
+
+void OverworldScene::renderTallGrassRustles(const Camera& camera) const {
+    if (!tallGrassRustleTexture_ || map_.tileWidth <= 0 || map_.tileHeight <= 0) {
+        return;
+    }
+
+    constexpr float kSourceFrameSize = 16.0f;
+    for (const TallGrassRustle& rustle : tallGrassRustles_) {
+        const int frame = std::clamp(
+            static_cast<int>(rustle.elapsedSeconds / kTallGrassRustleFrameSeconds),
+            0,
+            kTallGrassRustleFrameCount - 1
+        );
+
+        SDL_FRect src{};
+        src.x = 0.0f;
+        src.y = static_cast<float>(frame) * kSourceFrameSize;
+        src.w = kSourceFrameSize;
+        src.h = kSourceFrameSize;
+
+        SDL_FRect dst{};
+        dst.x = std::round(static_cast<float>(rustle.tileX * map_.tileWidth) - camera.view.x);
+        dst.y = std::round(static_cast<float>(rustle.tileY * map_.tileHeight) - camera.view.y);
+        dst.w = static_cast<float>(map_.tileWidth);
+        dst.h = static_cast<float>(map_.tileHeight);
+
+        textureManager_.draw(tallGrassRustleTexture_, src, dst);
+    }
+}
 
 bool OverworldScene::triggerWildEncounter(const std::string& tableId) {
     const auto wildEncounter = wildEncounterService_.rollEncounter(tableId, encounterRng());
@@ -130,6 +202,7 @@ void OverworldScene::checkEncounterZones(const float dt) {
         encounterCooldownSeconds_ = kEncounterCooldownOnBlockedSeconds;
         return;
     }
+    spawnTallGrassRustle(tileX, tileY);
 
     const float encounterChance = static_cast<float>(gameState_.wildEncounterRatePercent()) / 100.0f;
     if (encounterChance <= 0.0f) {

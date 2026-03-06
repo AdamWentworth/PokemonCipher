@@ -121,6 +121,10 @@ bool OverworldScene::loadMap(
         mapDefinition->baseTilesetPath.c_str(),
         mapDefinition->coverTilesetPath.empty() ? nullptr : mapDefinition->coverTilesetPath.c_str()
     );
+    if (!tallGrassRustleTexture_) {
+        tallGrassRustleTexture_ = textureManager_.load("assets/effects/tall_grass_rustle.png");
+    }
+    tallGrassRustles_.clear();
 
     world_.clear();
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL_render.h>
 #include <SDL3/SDL_events.h>
 
 #include <functional>
@@ -49,6 +50,13 @@ public:
     const std::string& currentMapId() const { return currentMapId_; }
 
 private:
+    struct TallGrassRustle {
+        int tileX = 0;
+        int tileY = 0;
+        float elapsedSeconds = 0.0f;
+        float durationSeconds = 0.0f;
+    };
+
     struct PendingMapWarp {
         std::string targetMap;
         std::string targetSpawnId = "default";
@@ -68,6 +76,9 @@ private:
     bool triggerWildEncounter(const std::string& tableId);
     void checkEncounterZones(float dt);
     void syncEncounterTrackingToPlayer();
+    void spawnTallGrassRustle(int tileX, int tileY);
+    void updateTallGrassRustles(float dt);
+    void renderTallGrassRustles(const Camera& camera) const;
     void registerDefaultScripts();
     void setScriptInputEnabled(bool isEnabled);
     void refreshInputState();
@@ -118,6 +129,8 @@ private:
     bool hasEncounterTrackingTile_ = false;
     int encounterTrackingTileX_ = 0;
     int encounterTrackingTileY_ = 0;
+    SDL_Texture* tallGrassRustleTexture_ = nullptr;
+    std::vector<TallGrassRustle> tallGrassRustles_;
     std::function<bool(const std::string&, const Vector2D&)> saveGameCallback_;
     std::function<void(const WildEncounter&, const std::string&, const Vector2D&)> encounterCallback_;
     StartMenuOverlay startMenuOverlay_;

@@ -1,6 +1,5 @@
 build/
 .agents/
-assets_raw/fire_red/
 
 # IDE / local editor state
 .vs/

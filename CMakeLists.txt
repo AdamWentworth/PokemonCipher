@@ -12,7 +12,6 @@ find_package(Lua REQUIRED)
 
 add_executable(PokemonCipher
   src/main.cpp
-  src/app/LaunchOptions.cpp
   src/engine/Game.cpp
   src/engine/TextureManager.cpp
   src/engine/Map.cpp

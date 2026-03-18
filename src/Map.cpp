@@ -1,148 +1,120 @@
 #include "Map.h"
-
-#include <cmath>
-#include <iostream>
+#include "TextureManager.h"
 #include <sstream>
 #include <string>
 #include <tinyxml2.h>
 
-#include "TextureManager.h"
-
-namespace {
-std::vector<std::vector<int>> ParseCsvLayer(const char* text, int width, int height) {
-    std::vector<std::vector<int>> out(height, std::vector<int>(width, 0));
-    if (!text) {
-        return out;
-    }
-
-    std::stringstream ss(text);
-    std::string value;
-    for (int row = 0; row < height; ++row) {
-        for (int col = 0; col < width; ++col) {
-            if (!std::getline(ss, value, ',')) {
-                return out;
-            }
-            out[row][col] = value.empty() ? 0 : std::stoi(value);
-        }
-    }
-    return out;
-}
-} // namespace
-
-void Map::load(const char* path, SDL_Texture* ts) {
+void Map::load(const char *path, SDL_Texture *ts) {
+    
     tileset = ts;
-    layers.clear();
-    colliders.clear();
-    spawnPoints.clear();
-
     tinyxml2::XMLDocument doc;
-    if (doc.LoadFile(path) != tinyxml2::XML_SUCCESS) {
-        std::cerr << "Failed to load map: " << path << '\n';
-        width = height = 0;
-        return;
-    }
+    doc.LoadFile(path);
 
     auto* mapNode = doc.FirstChildElement("map");
-    if (!mapNode) {
-        std::cerr << "TMX missing <map>: " << path << '\n';
-        width = height = 0;
-        return;
-    }
-
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
-    tileWidth = mapNode->IntAttribute("tilewidth", 16);
-    tileHeight = mapNode->IntAttribute("tileheight", 16);
+    colliders.clear();
+    itemSpawnPoints.clear();
 
-    for (auto* layer = mapNode->FirstChildElement("layer"); layer; layer = layer->NextSiblingElement("layer")) {
-        auto* data = layer->FirstChildElement("data");
-        layers.push_back(ParseCsvLayer(data ? data->GetText() : nullptr, width, height));
+    auto* layer = mapNode->FirstChildElement("layer");
+    auto* data = layer->FirstChildElement("data");
+    std::string csv = data->GetText();
+    std::stringstream ss(csv);
+    tileData = std::vector(height, std::vector<int>(width));
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            std::string val;
+            if (!std::getline(ss, val, ',')) break;
+            tileData[i][j] = std::stoi(val);
+        }
     }
-
+    // Parse object groups by their "name" value, not by XML order.
+    // This keeps loading stable even if groups are reordered or extra groups are added.
     for (auto* objectGroup = mapNode->FirstChildElement("objectgroup");
-         objectGroup;
-         objectGroup = objectGroup->NextSiblingElement("objectgroup")) {
-        const char* layerNameAttr = objectGroup->Attribute("name");
-        const std::string layerName = layerNameAttr ? layerNameAttr : "";
+        objectGroup != nullptr;
+        objectGroup = objectGroup->NextSiblingElement("objectgroup")) {
 
-        const bool isCollisionLayer = layerName.find("Collision") != std::string::npos;
-        const bool isSpawnLayer = layerName.find("Spawn") != std::string::npos;
+        const char* layerName = objectGroup->Attribute("name");
+        if (!layerName) continue;
+        const std::string groupName(layerName);
+        // Use substring checks so variants like
+        // "Item Spawn Points" and "Item Layer" both match.
+        const bool isCollisionLayer = groupName.find("Collision") != std::string::npos;
+        const bool isItemLayer = groupName.find("Item") != std::string::npos;
 
-        for (auto* obj = objectGroup->FirstChildElement("object"); obj; obj = obj->NextSiblingElement("object")) {
-            if (isCollisionLayer) {
+        // Collision layers contribute rectangle colliders.
+        if (isCollisionLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
                 Collider c;
-                c.tag = "wall";
                 c.rect.x = obj->FloatAttribute("x");
                 c.rect.y = obj->FloatAttribute("y");
                 c.rect.w = obj->FloatAttribute("width");
                 c.rect.h = obj->FloatAttribute("height");
                 colliders.push_back(c);
             }
+        }
 
-            if (isSpawnLayer && obj->FirstChildElement("point")) {
-                const char* spawnName = obj->Attribute("name");
-                if (spawnName && spawnName[0] != '\0') {
-                    spawnPoints[spawnName] = Vector2D(obj->FloatAttribute("x"), obj->FloatAttribute("y"));
-                }
+        // Item layers contribute point spawn positions.
+        if (isItemLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                if (!obj->FirstChildElement("point")) continue;
+                itemSpawnPoints.push_back(Vector2D(obj->FloatAttribute("x"), obj->FloatAttribute("y")));
             }
         }
     }
 }
 
-Vector2D Map::getSpawnPoint(const std::string& spawnId, const Vector2D& fallback) const {
-    auto it = spawnPoints.find(spawnId);
-    if (it != spawnPoints.end()) {
-        return it->second;
-    }
-    return fallback;
-}
 
-void Map::draw(const Camera& cam) {
-    if (!tileset || width <= 0 || height <= 0 || layers.empty()) {
-        return;
-    }
 
-    float textureWidth = 0.0f;
-    float textureHeight = 0.0f;
-    if (!SDL_GetTextureSize(tileset, &textureWidth, &textureHeight) || textureWidth <= 0 || textureHeight <= 0) {
-        return;
-    }
+void Map::draw(const Camera &cam) {
 
-    const int columns = textureWidth / tileWidth;
-    if (columns <= 0) {
-        return;
-    }
+    SDL_FRect src{}, dest{};
 
-    SDL_FRect src{};
-    src.w = static_cast<float>(tileWidth);
-    src.h = static_cast<float>(tileHeight);
+    dest.w = dest.h = 32;
 
-    SDL_FRect dst{};
-    dst.w = static_cast<float>(tileWidth * renderScale);
-    dst.h = static_cast<float>(tileHeight * renderScale);
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            int type = tileData[row][col];
 
-    for (const auto& layer : layers) {
-        for (int row = 0; row < height; ++row) {
-            for (int col = 0; col < width; ++col) {
-                const int gid = layer[row][col];
-                if (gid <= 0) {
-                    continue;
-                }
+            float worldX = static_cast<float>(col) * dest.w;
+            float worldY = static_cast<float>(row) * dest.h;
 
-                const int tileIndex = gid - 1;
-                const int srcCol = tileIndex % columns;
-                const int srcRow = tileIndex / columns;
+            dest.x = std::round(worldX - cam.view.x);
+            dest.y = std::round(worldY - cam.view.y);
 
-                src.x = static_cast<float>(srcCol * tileWidth);
-                src.y = static_cast<float>(srcRow * tileHeight);
-
-                const float worldX = static_cast<float>(col * tileWidth * renderScale);
-                const float worldY = static_cast<float>(row * tileHeight * renderScale);
-                dst.x = std::round(worldX - cam.view.x);
-                dst.y = std::round(worldY - cam.view.y);
-
-                TextureManager::draw(tileset, src, dst);
+            switch (type) {
+                //dirt
+                case 1: 
+                    src.x = 0;
+                    src.y = 0;
+                    src.w = 32;
+                    src.h = 32;
+                    break;
+                //grass
+                case 2: 
+                    src.x = 32;
+                    src.y = 0;
+                    src.w = 32;
+                    src.h = 32;
+                    break;
+                //water
+                case 4: 
+                    src.x = 32;
+                    src.y = 32;
+                    src.w = 32;
+                    src.h = 32;
+                    break;
+                //red
+                default: 
+                    break;
             }
+            TextureManager::draw(tileset, src, dest);
         }
     }
 }

@@ -5,10 +5,10 @@
 #include "../ecs/World.h"
 
 class Scene {
-public:
+    public:
     Scene(const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
 
-    void update(float dt, SDL_Event& e) {
+    void update(const float dt, SDL_Event &e) {
         world.update(dt, e);
     }
 
@@ -18,10 +18,9 @@ public:
 
     World world;
 
-    const std::string& getName() const {
-        return name;
-    }
-
-private:
-    std::string name;
+    const std::string& getName() const {return name; }
+    
+    private:
+    std::string name; 
+    void createProjectile(Vector2D pos, Vector2D dir, int speed);
 };

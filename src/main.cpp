@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     float deltaTime{};
 
     game = new Game();
-    game->init("Pokemon Cipher", 800, 600, false);
+    game->init("8051 Tutorial Engine", 800, 600, false);
 
     Uint64 ticks = SDL_GetTicks();
 

@@ -8,60 +8,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
-find_package(Lua REQUIRED)
 
 add_executable(PokemonCipher
   src/main.cpp
-  src/engine/Game.cpp
-  src/engine/TextureManager.cpp
-  src/engine/Map.cpp
-  src/engine/map/CompiledMapLoader.cpp
-  src/engine/map/TmxMapLoader.cpp
-  src/engine/TilemapRenderer.cpp
+  src/Game.cpp
+  src/Map.cpp
+  src/GameObject.cpp
+  src/TextureManager.cpp
+  src/manager/AssetManager.cpp
+  src/manager/Scene.cpp
 
-  src/game/OverworldScene.cpp
-  src/game/OverworldSceneMap.cpp
-  src/game/OverworldSceneDev.cpp
-  src/game/OverworldSceneInteraction.cpp
-  src/game/OverworldSceneEncounter.cpp
-  src/game/BattleScene.cpp
-  src/game/TitleScene.cpp
-  src/game/dev/OverworldDevConsole.cpp
-  src/game/dev/OverworldDevConsoleEncounterHandlers.cpp
-  src/game/dev/OverworldDevConsoleParsing.cpp
-  src/game/dev/OverworldDevConsoleInfoHandlers.cpp
-  src/game/dev/OverworldDevConsoleScriptHandlers.cpp
-  src/game/dev/OverworldDevConsoleTravelHandlers.cpp
-  src/game/dev/OverworldDevConsoleStateHandlers.cpp
-  src/game/encounters/WildEncounterService.cpp
-  src/game/scripting/LuaOverworldScriptLoader.cpp
-  src/game/save/SaveGameStorage.cpp
-  src/game/data/SpeciesRegistry.cpp
-  src/game/ui/DialogueOverlay.cpp
-  src/game/ui/FrlgTextRenderer.cpp
-  src/game/ui/PartyMenuLayout.cpp
-  src/game/ui/PartyMenuOverlay.cpp
-  src/game/ui/PokemonSummaryLayout.cpp
-  src/game/ui/PokemonSummaryLayoutProvider.cpp
-  src/game/ui/PokemonSummaryRenderUtils.cpp
-  src/game/ui/SummaryContent.cpp
-  src/game/ui/PokemonSummaryOverlay.cpp
-  src/game/ui/PokemonSummaryOverlayRender.cpp
-  src/game/ui/PokemonSummaryOverlayInfoPage.cpp
-  src/game/ui/PokemonSummaryOverlaySkillsPage.cpp
-  src/game/ui/PokemonSummaryOverlayMovesPage.cpp
-  src/game/ui/StartMenuOverlay.cpp
-  src/game/world/DefaultMapRegistry.cpp
-  src/game/world/MapRegistryLoader.cpp
-  src/game/world/OverworldCharacterAssets.cpp
-  src/game/world/OverworldEntityFactory.cpp
+  src/utils/Vector2D.cpp
+  src/utils/Collision.cpp
 
-  src/engine/manager/AssetManager.cpp
-
-  src/engine/utils/Vector2D.cpp
-  src/engine/utils/Collision.cpp
-
-  src/engine/ecs/systems/CollisionSystem.cpp
+  src/ecs/World.cpp
+  src/ecs/systems/CollisionSystem.cpp
 )
 
 target_include_directories(PokemonCipher PRIVATE
@@ -74,15 +35,8 @@ target_link_libraries(PokemonCipher PRIVATE
   tinyxml2::tinyxml2
 )
 
-if (TARGET Lua::Lua)
-  target_link_libraries(PokemonCipher PRIVATE Lua::Lua)
-else()
-  target_include_directories(PokemonCipher PRIVATE ${LUA_INCLUDE_DIR})
-  target_link_libraries(PokemonCipher PRIVATE ${LUA_LIBRARIES})
-endif()
-
+# Copy assets next to the exe: build/debug/assets/...
 set(ASSETS_SRC "${CMAKE_SOURCE_DIR}/assets")
-message(STATUS "PokemonCipher assets source: assets")
 add_custom_command(TARGET PokemonCipher POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${ASSETS_SRC}"

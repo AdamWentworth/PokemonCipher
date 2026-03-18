@@ -61,7 +61,6 @@ add_executable(PokemonCipher
   src/engine/utils/Vector2D.cpp
   src/engine/utils/Collision.cpp
 
-  src/engine/ecs/World.cpp
   src/engine/ecs/systems/CollisionSystem.cpp
 )
 

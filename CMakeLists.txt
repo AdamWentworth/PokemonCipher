@@ -9,7 +9,7 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 
-add_executable(PokemonCipher
+add_executable(PokemonCiper
   src/main.cpp
   src/Game.cpp
   src/Map.cpp

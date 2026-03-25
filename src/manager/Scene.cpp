@@ -5,7 +5,7 @@
 Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, const int windowHeight) : name(sceneName) {
 
     // Load a map
-    world.getMap().load(mapPath, TextureManager::load("assets/tileset.png"));
+    world.getMap().load(mapPath, TextureManager::load("assets/tilesets/pallet_town/pallet_town_tileset.png"));
     for (auto &collider : world.getMap().colliders) {
         auto& e = world.createEntity();
         e.addComponent<Transform>(Vector2D(collider.rect.x, collider.rect.y), 0.0f, 1.0f);
@@ -46,7 +46,7 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     Animation anim = AssetManager::getAnimation("player");
     player.addComponent<Animation>(anim);
 
-    SDL_Texture* tex = TextureManager::load("assets/animations/lamb_anim.png");
+    SDL_Texture* tex = TextureManager::load("assets/characters/wes/wes_overworld_updated.png");
     SDL_FRect playerSrc{0.0f, 0.0f, 32.0f, 32.0f};
     auto playerClipIt = anim.clips.find(anim.currentClip);
     if (playerClipIt != anim.clips.end() && !playerClipIt->second.frameIndices.empty()) {

@@ -15,15 +15,19 @@ class KeyboardInputSystem {
                 if (event.type == SDL_EVENT_KEY_DOWN) {
                     switch (event.key.key) {
                         case SDLK_W:
+                        case SDLK_UP:
                             v.direction.y = -1;
                             break;
                         case SDLK_S:
+                        case SDLK_DOWN:
                             v.direction.y = 1;
                             break;
                         case SDLK_A:
+                        case SDLK_LEFT:
                             v.direction.x = -1;
                             break;
                         case SDLK_D:
+                        case SDLK_RIGHT:
                             v.direction.x = 1;
                             break;
                         default:
@@ -33,15 +37,19 @@ class KeyboardInputSystem {
                 if (event.type == SDL_EVENT_KEY_UP) {
                     switch (event.key.key) {
                         case SDLK_W:
+                        case SDLK_UP:
                             v.direction.y = 0;
                             break;
                         case SDLK_S:
+                        case SDLK_DOWN:
                             v.direction.y = 0;
                             break;
                         case SDLK_A:
+                        case SDLK_LEFT:
                             v.direction.x = 0;
                             break;
                         case SDLK_D:
+                        case SDLK_RIGHT:
                             v.direction.x = 0;
                             break;
                         default:

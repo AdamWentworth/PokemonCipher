@@ -68,10 +68,10 @@ void Game::init(const char* title, int width, int height, bool fullscreen) {
         return;
     }
 
-    AssetManager::loadAnimation("player", "assets/animations/lamb_animations.xml");
+    AssetManager::loadAnimation("player", "assets/animations/wes_overworld.xml");
     AssetManager::loadAnimation("enemy", "assets/animations/bird_animations.xml");
 
-    sceneManager.load("level1", "assets/map.tmx", width, height);
+    sceneManager.load("level1", "assets/maps/pallet_town/pallet_town_map.tmx", width, height);
     sceneManager.load("level2", "assets/map2.tmx", width, height);
 
     sceneManager.changeSceneDeferred("level1");

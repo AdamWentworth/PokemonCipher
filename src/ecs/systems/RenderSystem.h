@@ -31,8 +31,10 @@ public:
                 auto& t = entity->getComponent<Transform>();
                 auto& sprite = entity->getComponent<Sprite>();
 
-                sprite.dst.x = t.position.x - cam.view.x;
-                sprite.dst.y = t.position.y - cam.view.y;
+                // Apply the sprite offset here so the transform can continue to
+                // represent the tile an entity stands on even when the art is taller.
+                sprite.dst.x = t.position.x - cam.view.x + sprite.offset.x;
+                sprite.dst.y = t.position.y - cam.view.y + sprite.offset.y;
 
                 if (entity->hasComponent<Animation>()) {
                     auto& anim = entity->getComponent<Animation>();

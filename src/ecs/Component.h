@@ -23,6 +23,9 @@ struct Sprite {
     SDL_Texture* texture = nullptr;
     SDL_FRect src{};
     SDL_FRect dst{};
+    // A render-only offset lets taller character art keep a one-tile gameplay
+    // position, so movement and collision can stay simple while the sprite draws upward.
+    Vector2D offset{};
 };
 
 struct Collider {

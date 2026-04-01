@@ -50,18 +50,28 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     player.addComponent<Animation>(anim);
 
     SDL_Texture* tex = TextureManager::load("assets/characters/wes/wes_overworld_updated.png");
-    SDL_FRect playerSrc{0.0f, 0.0f, 32.0f, 32.0f};
+    // Wes's animation frames are taller than one tile, so we start from his
+    // authored frame size and fix the gameplay footprint separately below.
+    SDL_FRect playerSrc{0.0f, 0.0f, 31.0f, 45.0f};
     auto playerClipIt = anim.clips.find(anim.currentClip);
     if (playerClipIt != anim.clips.end() && !playerClipIt->second.frameIndices.empty()) {
         playerSrc = playerClipIt->second.frameIndices[0];
     }
-    SDL_FRect playerDst{ playerTransform.position.x, playerTransform.position.y, 64.0f, 64.0f };
+    const float playerFootprint = 32.0f;
+    // Keep Wes at his authored aspect ratio so he reads like a character sprite
+    // instead of being compressed into a square just to fit a one-tile collider.
+    SDL_FRect playerDst{ playerTransform.position.x, playerTransform.position.y, playerSrc.w, playerSrc.h };
 
-    player.addComponent<Sprite>(tex, playerSrc, playerDst);
+    auto& playerSprite = player.addComponent<Sprite>(tex, playerSrc, playerDst);
+    // Move the taller sprite upward so the transform still marks the tile the
+    // player is standing on, with the extra height extending above that tile.
+    playerSprite.offset = Vector2D((playerFootprint - playerDst.w) * 0.5f, -(playerDst.h - playerFootprint));
 
     auto& playerCollider = player.addComponent<Collider>("player");
-    playerCollider.rect.w = playerDst.w;
-    playerCollider.rect.h = playerDst.h;
+    // Keep collision at exactly one tile even though the sprite is taller,
+    // because the goal was a one-tile playable footprint, not a one-tile-tall sprite.
+    playerCollider.rect.w = playerFootprint;
+    playerCollider.rect.h = playerFootprint;
 
     player.addComponent<PlayerTag>();
 

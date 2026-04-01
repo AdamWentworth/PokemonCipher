@@ -40,7 +40,10 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     cam.addComponent<Camera>(camView, world.getMap().width * 32.0f, world.getMap().height * 32.0f);
 
     Entity& player = world.createEntity();
-    auto& playerTransform = player.addComponent<Transform>(Vector2D(0.0f, 0.0f), 0.0f, 1.0f);
+    // Start the player on a clear tile near the middle of the opening map so
+    // the scene begins in a playable area instead of the top-left corner.
+    const Vector2D playerStart(176.0f, 240.0f);
+    auto& playerTransform = player.addComponent<Transform>(playerStart, 0.0f, 1.0f);
     player.addComponent<Velocity>(Vector2D(0.0f, 0.0f), 120.0f);
 
     Animation anim = AssetManager::getAnimation("player");

@@ -26,6 +26,10 @@ int sourceTileH = 32;
 int tilesetColumns = 1;
 
 namespace {
+// Centralizing the rendered tile size keeps map drawing and TMX object scaling
+// in sync, so collision fixes do not drift if we adjust the on-screen tile size later.
+constexpr float kRenderedTileSize = 32.0f;
+
 // Both terrain and cover layers use the same TMX CSV format, so a shared
 // parser keeps the two passes consistent and avoids duplicating load logic.
 void parseLayerData(tinyxml2::XMLElement* layer, int width, int height, std::vector<std::vector<int>>& target) {
@@ -50,7 +54,9 @@ void parseLayerData(tinyxml2::XMLElement* layer, int width, int height, std::vec
 // sharing the render path prevents subtle drift between the two passes.
 void drawLayer(SDL_Texture* tileset, const Camera& cam, int width, int height, const std::vector<std::vector<int>>& layerData) {
     SDL_FRect src{}, dest{};
-    dest.w = dest.h = 32;
+    // Use the shared render size here so the drawn map matches the same scale
+    // used when converting TMX object-layer coordinates into gameplay space.
+    dest.w = dest.h = kRenderedTileSize;
 
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
@@ -109,6 +115,13 @@ void Map::load(const char *path, SDL_Texture *ts) {
     height = mapNode->IntAttribute("height");
     colliders.clear();
     itemSpawnPoints.clear();
+    // TMX object layers are stored in the map's source pixel size, but this
+    // project draws every tile at 32x32. We scale object data during load so
+    // collisions and point markers line up with the rendered world.
+    const int mapTileW = mapNode->IntAttribute("tilewidth", 16);
+    const int mapTileH = mapNode->IntAttribute("tileheight", 16);
+    const float objectScaleX = kRenderedTileSize / static_cast<float>(mapTileW);
+    const float objectScaleY = kRenderedTileSize / static_cast<float>(mapTileH);
 
     // NEW:
     // Read metadata from the <tileset> node so we do not need
@@ -177,10 +190,12 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 obj = obj->NextSiblingElement("object")) {
 
                 Collider c;
-                c.rect.x = obj->FloatAttribute("x");
-                c.rect.y = obj->FloatAttribute("y");
-                c.rect.w = obj->FloatAttribute("width");
-                c.rect.h = obj->FloatAttribute("height");
+                // Scale each wall rectangle into the same 32x32 world space as the
+                // visible tiles, otherwise the player collides with a half-size map.
+                c.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                c.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                c.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                c.rect.h = obj->FloatAttribute("height") * objectScaleY;
                 colliders.push_back(c);
             }
         }
@@ -192,7 +207,12 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 obj = obj->NextSiblingElement("object")) {
 
                 if (!obj->FirstChildElement("point")) continue;
-                itemSpawnPoints.push_back(Vector2D(obj->FloatAttribute("x"), obj->FloatAttribute("y")));
+                // Scale point layers for the same reason as walls so spawn/use
+                // markers stay aligned after the map is drawn larger than the TMX source.
+                itemSpawnPoints.push_back(Vector2D(
+                    obj->FloatAttribute("x") * objectScaleX,
+                    obj->FloatAttribute("y") * objectScaleY
+                ));
             }
         }
     }

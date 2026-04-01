@@ -47,14 +47,23 @@ public:
     }
 
     void render() {
+        // We now render the map twice, so we keep the same camera for both
+        // passes to avoid the cover layer drifting away from terrain/sprites.
+        Camera* activeCamera = nullptr;
 
         for (auto& entity: entities) {
             if (entity->hasComponent<Camera>()){
-                map.draw(entity->getComponent<Camera>());
+                activeCamera = &entity->getComponent<Camera>();
+                map.draw(*activeCamera);
                 break;
             }
         }
         renderSystem.render(entities);
+        if (activeCamera) {
+            // This second map pass is the whole reason cover layers work:
+            // drawing them last lets roofs/tree tops overlap the player and NPCs.
+            map.drawCover(*activeCamera);
+        }
     }
 
     Entity& createEntity() {

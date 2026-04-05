@@ -8,9 +8,15 @@ class AnimationSystem {
     public:
     void update(const std::vector<std::unique_ptr<Entity>>& entities, float dt) {
         for (auto& e : entities) {
-            if (e->hasComponent<Animation>() && e->hasComponent<Velocity>()) {
+            if (e->hasComponent<Animation>() && e->hasComponent<GridMovement>()) {
                 auto& anim = e->getComponent<Animation>();
-                auto& velocity = e->getComponent<Velocity>();
+                auto& grid = e->getComponent<GridMovement>();
+                // Start with the latest input so the player can still face the
+                // direction they are pressing while standing still.
+                Vector2D direction = grid.inputDirection;
+                // If a step is already happening, keep using that direction so
+                // the walk animation finishes with the movement.
+                if (!(grid.stepDirection == Vector2D(0.0f, 0.0f))) direction = grid.stepDirection;
                 auto hasClip = [&anim](const std::string& clipName) {
                     auto it = anim.clips.find(clipName);
                     return it != anim.clips.end() && !it->second.frameIndices.empty();
@@ -18,13 +24,13 @@ class AnimationSystem {
 
                 std::string newClip = anim.currentClip;
 
-                if (velocity.direction.x > 0.0f) {
+                if (direction.x > 0.0f) {
                     newClip = "walk_right";
-                } else if (velocity.direction.x < 0.0f) {
+                } else if (direction.x < 0.0f) {
                     newClip = "walk_left";
-                } else if (velocity.direction.y > 0.0f) {
+                } else if (direction.y > 0.0f) {
                     newClip = "walk_down";
-                } else if (velocity.direction.y < 0.0f) {
+                } else if (direction.y < 0.0f) {
                     newClip = "walk_up";
                 } else if (anim.currentClip == "walk_right") {
                     newClip = "idle_right";

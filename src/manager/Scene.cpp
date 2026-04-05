@@ -44,7 +44,9 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     // because starting inside a wall causes every move to be immediately undone.
     const Vector2D playerStart(192.0f, 288.0f);
     auto& playerTransform = player.addComponent<Transform>(playerStart, 0.0f, 1.0f);
-    player.addComponent<Velocity>(Vector2D(0.0f, 0.0f), 120.0f);
+    // Tile movement now keeps all of the player's movement data in one place.
+    // These values mean: 32x32 tiles, 120 move speed, and start on the spawn tile.
+    player.addComponent<GridMovement>(32.0f, 120.0f, playerStart);
 
     Animation anim = AssetManager::getAnimation("player");
     player.addComponent<Animation>(anim);

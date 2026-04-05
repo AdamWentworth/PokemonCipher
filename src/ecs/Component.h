@@ -13,10 +13,18 @@ struct Transform {
     Vector2D oldPosition{};
 };
 
-// direction and speed
-struct Velocity {
-    Vector2D direction{};
-    float speed{};
+struct GridMovement {
+    // This keeps everything the player needs for one-tile movement.
+    float tileSize = 32.0f;
+    // How fast the player moves toward the next tile.
+    float speed = 120.0f;
+    // The exact spot the current step is trying to reach.
+    Vector2D targetPosition{};
+    // The direction the player is currently asking for.
+    Vector2D inputDirection{};
+    // The direction we are actually following right now, so the player finishes
+    // the current tile before changing direction.
+    Vector2D stepDirection{};
 };
 
 struct Sprite {

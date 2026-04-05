@@ -47,15 +47,8 @@ struct Camera {
     float worldHeight;
 };
 
-struct TimedSpawner {
-    float spawnInterval{};
-    std::function<void()> spawnCallback{};
-    float timer{};
-};
-
 struct SceneState {
     int coinsCollected = 0;
 };
 
 struct PlayerTag{};
-struct ProjectileTag{};

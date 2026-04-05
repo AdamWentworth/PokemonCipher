@@ -13,8 +13,6 @@
 #include "systems/CollisionSystem.h"
 #include "systems/AnimationSystem.h"
 #include "systems/CameraSystem.h"
-#include "systems/SpawnTimerSystem.h"
-#include "systems/DestructionSystem.h"
 #include "EventManager.h"
 #include "Map.h"
 
@@ -29,8 +27,6 @@ class World {
     AnimationSystem animationSystem;
     CameraSystem cameraSystem;
     EventManager eventManager;
-    SpawnTimerSystem spawnTimerSystem;
-    DestructionSystem destructionSystem;
 
 public:
     World();
@@ -40,8 +36,6 @@ public:
         collisionSystem.update(*this);
         animationSystem.update(entities, dt);
         cameraSystem.update(entities);
-        spawnTimerSystem.update(entities, dt);
-        destructionSystem.update(entities);
         synchronizeEntities();
         cleanup();
     }

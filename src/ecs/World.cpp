@@ -38,8 +38,6 @@ World::World() {
         Entity* player = nullptr;
         Entity* item = nullptr;
         Entity* wall = nullptr;
-        Entity* projectile = nullptr;
-
         if (colliderA.tag == "player" && colliderB.tag == "item") {
             player = collision.entityA;
             item = collision.entityB;
@@ -79,19 +77,6 @@ World::World() {
         if (player && wall) {
            auto& t = player->getComponent<Transform>();
            t.position = t.oldPosition;
-        }
-
-        if (colliderA.tag == "player" && colliderB.tag == "projectile") {
-            player = collision.entityA;
-            projectile = collision.entityB;
-        } else if (colliderA.tag == "projectile" && colliderB.tag == "player") {
-            player = collision.entityB;
-            projectile = collision.entityA;
-        }
-
-        if (player && projectile) {
-            player->destroy();
-            Game::onSceneChangeRequest("gameover");
         }
     });
 }

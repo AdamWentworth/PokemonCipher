@@ -50,6 +50,24 @@ void parseLayerData(tinyxml2::XMLElement* layer, int width, int height, std::vec
     }
 }
 
+// Warp and spawn data live inside <properties>, so this helper keeps that
+// lookup in one place instead of repeating the same XML walk for every object.
+const char* getObjectPropertyValue(tinyxml2::XMLElement* object, const char* propertyName) {
+    auto* properties = object->FirstChildElement("properties");
+    if (!properties) return nullptr;
+
+    for (auto* property = properties->FirstChildElement("property");
+        property != nullptr;
+        property = property->NextSiblingElement("property")) {
+        const char* name = property->Attribute("name");
+        if (name && std::string(name) == propertyName) {
+            return property->Attribute("value");
+        }
+    }
+
+    return nullptr;
+}
+
 // Terrain and cover need identical tile math so they stay perfectly aligned;
 // sharing the render path prevents subtle drift between the two passes.
 void drawLayer(SDL_Texture* tileset, const Camera& cam, int width, int height, const std::vector<std::vector<int>>& layerData) {
@@ -114,6 +132,8 @@ void Map::load(const char *path, SDL_Texture *ts) {
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
     colliders.clear();
+    spawnPoints.clear();
+    warps.clear();
     // TMX object layers are stored in the map's source pixel size, but this
     // project draws every tile at 32x32. We scale object data during load so
     // collisions and point markers line up with the rendered world.
@@ -180,6 +200,12 @@ void Map::load(const char *path, SDL_Texture *ts) {
         // Collision is the only object-group gameplay data we still use here,
         // since pickup objects were removed from the map code.
         const bool isCollisionLayer = groupName.find("Collision") != std::string::npos;
+        // These point markers tell the scene where to place the player after
+        // entering from a door, stair, or route change.
+        const bool isSpawnLayer = groupName.find("Player Spawn Points") != std::string::npos;
+        // These rectangles mark the spots that should switch the player into
+        // another map when they are touched.
+        const bool isWarpLayer = groupName.find("Warp Layer") != std::string::npos;
 
         // Collision layers contribute rectangle colliders.
         if (isCollisionLayer) {
@@ -195,6 +221,50 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 c.rect.w = obj->FloatAttribute("width") * objectScaleX;
                 c.rect.h = obj->FloatAttribute("height") * objectScaleY;
                 colliders.push_back(c);
+            }
+        } else if (isSpawnLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                SpawnPoint spawn;
+                const char* spawnName = obj->Attribute("name");
+                spawn.id = spawnName ? spawnName : "default";
+                spawn.position.x = obj->FloatAttribute("x") * objectScaleX;
+                spawn.position.y = obj->FloatAttribute("y") * objectScaleY;
+                spawnPoints.push_back(spawn);
+            }
+        } else if (isWarpLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                WarpPoint warp;
+                warp.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                warp.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                warp.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                warp.rect.h = obj->FloatAttribute("height") * objectScaleY;
+
+                if (const char* targetMap = getObjectPropertyValue(obj, "target_map")) {
+                    warp.targetMap = targetMap;
+                }
+                if (const char* targetSpawnId = getObjectPropertyValue(obj, "target_spawn_id")) {
+                    warp.targetSpawnId = targetSpawnId;
+                }
+
+                const char* targetSpawnX = getObjectPropertyValue(obj, "target_spawn_x");
+                const char* targetSpawnY = getObjectPropertyValue(obj, "target_spawn_y");
+                if (targetSpawnX && targetSpawnY) {
+                    // Some map exits land on a fixed spot instead of a named
+                    // spawn point, so this simple version supports both.
+                    warp.targetPosition.x = std::stof(targetSpawnX) * objectScaleX;
+                    warp.targetPosition.y = std::stof(targetSpawnY) * objectScaleY;
+                    warp.hasTargetPosition = true;
+                }
+
+                if (!warp.targetMap.empty()) {
+                    warps.push_back(warp);
+                }
             }
         }
     }

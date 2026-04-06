@@ -2,10 +2,24 @@
 #include "../TextureManager.h"
 #include "AssetManager.h"
 
-Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, const int windowHeight) : name(sceneName) {
+namespace {
+Entity* findPlayer(World& world) {
+    for (auto& entity : world.getEntities()) {
+        if (entity && entity->hasComponent<PlayerTag>() && entity->hasComponent<Collider>()) {
+            return entity.get();
+        }
+    }
+
+    return nullptr;
+}
+}
+
+Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath, const int windowWidth, const int windowHeight, const SceneSpawnRequest& spawnRequest) : name(sceneName) {
 
     // Load a map
-    world.getMap().load(mapPath, TextureManager::load("assets/tilesets/pallet_town/pallet_town_tileset.png"));
+    // Each scene can point at a different tileset image, so we pass that in
+    // here instead of forcing every map to look like Pallet Town.
+    world.getMap().load(mapPath, TextureManager::load(tilesetPath));
     for (auto &collider : world.getMap().colliders) {
         auto& e = world.createEntity();
         e.addComponent<Transform>(Vector2D(collider.rect.x, collider.rect.y), 0.0f, 1.0f);
@@ -23,9 +37,9 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     cam.addComponent<Camera>(camView, world.getMap().width * 32.0f, world.getMap().height * 32.0f);
 
     Entity& player = world.createEntity();
-    // Use a clear starting tile that does not overlap the scaled wall colliders,
-    // because starting inside a wall causes every move to be immediately undone.
-    const Vector2D playerStart(192.0f, 288.0f);
+    // This now comes from the map's spawn points so doorways and route exits
+    // can place the player without editing C++ each time.
+    const Vector2D playerStart = waypointSystem.resolvePlayerStart(world.getMap().spawnPoints, spawnRequest);
     auto& playerTransform = player.addComponent<Transform>(playerStart, 0.0f, 1.0f);
     // Tile movement now keeps all of the player's movement data in one place.
     // These values mean: 32x32 tiles, 120 move speed, and start on the spawn tile.
@@ -55,8 +69,34 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     auto& playerCollider = player.addComponent<Collider>("player");
     // Keep collision at exactly one tile even though the sprite is taller,
     // because the goal was a one-tile playable footprint, not a one-tile-tall sprite.
+    playerCollider.rect.x = playerStart.x;
+    playerCollider.rect.y = playerStart.y;
     playerCollider.rect.w = playerFootprint;
     playerCollider.rect.h = playerFootprint;
 
     player.addComponent<PlayerTag>();
+    // This tells the waypoint helper whether the player started on top of a
+    // warp tile, which stops a fresh map load from instantly bouncing back.
+    waypointSystem.beginScene(playerCollider.rect, world.getMap().warps);
+}
+
+void Scene::update(const float dt, SDL_Event &e) {
+    world.update(dt, e);
+
+    if (Entity* player = findPlayer(world)) {
+        const auto& playerCollider = player->getComponent<Collider>();
+        // The simple waypoint pass only needs the player's box to know when a
+        // touched warp should request the next map.
+        waypointSystem.update(playerCollider.rect, world.getMap().warps, pendingSceneChange);
+    }
+}
+
+bool Scene::takePendingSceneChange(SceneChangeRequest& request) {
+    if (pendingSceneChange.sceneName.empty()) {
+        return false;
+    }
+
+    request = pendingSceneChange;
+    pendingSceneChange = {};
+    return true;
 }

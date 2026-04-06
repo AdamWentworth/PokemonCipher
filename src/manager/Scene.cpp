@@ -12,6 +12,22 @@ Entity* findPlayer(World& world) {
 
     return nullptr;
 }
+
+std::string idleClipForFacing(const Vector2D& facingDirection) {
+    if (facingDirection.x > 0.0f) return "idle_right";
+    if (facingDirection.x < 0.0f) return "idle_left";
+    if (facingDirection.y < 0.0f) return "idle_up";
+    return "idle_down";
+}
+
+// The current clip name already tells us which way the player is facing, so we
+// can reuse that instead of storing a second copy of the same idea in movement.
+Vector2D facingForClip(const std::string& clipName) {
+    if (clipName.find("right") != std::string::npos) return Vector2D(1.0f, 0.0f);
+    if (clipName.find("left") != std::string::npos) return Vector2D(-1.0f, 0.0f);
+    if (clipName.find("up") != std::string::npos) return Vector2D(0.0f, -1.0f);
+    return Vector2D(0.0f, 1.0f);
+}
 }
 
 Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath, const int windowWidth, const int windowHeight, const SceneSpawnRequest& spawnRequest) : name(sceneName) {
@@ -44,8 +60,16 @@ Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath
     // Tile movement now keeps all of the player's movement data in one place.
     // These values mean: 32x32 tiles, 120 move speed, and start on the spawn tile.
     player.addComponent<GridMovement>(32.0f, 120.0f, playerStart);
+    // Doorways can carry in a facing direction; if they do not, we fall back
+    // to the normal down-facing pose the player had before waypoints existed.
+    const Vector2D playerFacing = spawnRequest.facingDirection == Vector2D(0.0f, 0.0f)
+        ? Vector2D(0.0f, 1.0f)
+        : spawnRequest.facingDirection;
 
     Animation anim = AssetManager::getAnimation("player");
+    // Set the opening idle pose from the carried-in facing so a doorway keeps
+    // the player looking the same way on the first frame of the new map.
+    anim.currentClip = idleClipForFacing(playerFacing);
     player.addComponent<Animation>(anim);
 
     SDL_Texture* tex = TextureManager::load("assets/characters/wes/wes_overworld_updated.png");
@@ -75,9 +99,9 @@ Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath
     playerCollider.rect.h = playerFootprint;
 
     player.addComponent<PlayerTag>();
-    // This tells the waypoint helper whether the player started on top of a
-    // warp tile, which stops a fresh map load from instantly bouncing back.
-    waypointSystem.beginScene(playerCollider.rect, world.getMap().warps);
+    // Let the waypoint helper remember whether this spawn started on a doorway
+    // tile so the player does not bounce straight back through it.
+    waypointSystem.beginScene(playerCollider.rect, world.getMap().warps, playerFacing);
 }
 
 void Scene::update(const float dt, SDL_Event &e) {
@@ -85,9 +109,18 @@ void Scene::update(const float dt, SDL_Event &e) {
 
     if (Entity* player = findPlayer(world)) {
         const auto& playerCollider = player->getComponent<Collider>();
-        // The simple waypoint pass only needs the player's box to know when a
-        // touched warp should request the next map.
-        waypointSystem.update(playerCollider.rect, world.getMap().warps, pendingSceneChange);
+        const auto& playerMovement = player->getComponent<GridMovement>();
+        const auto& playerAnimation = player->getComponent<Animation>();
+        // The waypoint helper turns a touched doorway or route edge into the
+        // next scene request. We read facing from the current animation clip so
+        // doorway state does not need its own extra movement field.
+        waypointSystem.update(
+            playerCollider.rect,
+            playerMovement.inputDirection,
+            facingForClip(playerAnimation.currentClip),
+            world.getMap().warps,
+            pendingSceneChange
+        );
     }
 }
 

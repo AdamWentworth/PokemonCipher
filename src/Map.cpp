@@ -251,6 +251,11 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 if (const char* targetSpawnId = getObjectPropertyValue(obj, "target_spawn_id")) {
                     warp.targetSpawnId = targetSpawnId;
                 }
+                if (const char* requiredDirection = getObjectPropertyValue(obj, "required_direction")) {
+                    // Some door and stair warps should only fire when the player
+                    // steps into that tile from the matching side.
+                    warp.requiredDirection = requiredDirection;
+                }
 
                 const char* targetSpawnX = getObjectPropertyValue(obj, "target_spawn_x");
                 const char* targetSpawnY = getObjectPropertyValue(obj, "target_spawn_y");

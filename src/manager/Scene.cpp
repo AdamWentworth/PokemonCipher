@@ -1,6 +1,9 @@
 #include "Scene.h"
 #include "../TextureManager.h"
 #include "AssetManager.h"
+#include "../ecs/systems/InteractionSystem.h"
+#include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_log.h>
 
 namespace {
 Entity* findPlayer(World& world) {
@@ -27,6 +30,19 @@ Vector2D facingForClip(const std::string& clipName) {
     if (clipName.find("left") != std::string::npos) return Vector2D(-1.0f, 0.0f);
     if (clipName.find("up") != std::string::npos) return Vector2D(0.0f, -1.0f);
     return Vector2D(0.0f, 1.0f);
+}
+
+// These keys match the usual Pokemon-style confirm button so the player can
+// reuse the same habit later for signs, NPCs, and dialogue boxes.
+bool isInteractionKey(const SDL_Event& event) {
+    if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
+        return false;
+    }
+
+    return event.key.key == SDLK_RETURN ||
+        event.key.key == SDLK_KP_ENTER ||
+        event.key.key == SDLK_SPACE ||
+        event.key.key == SDLK_Z;
 }
 }
 
@@ -111,13 +127,26 @@ void Scene::update(const float dt, SDL_Event &e) {
         const auto& playerCollider = player->getComponent<Collider>();
         const auto& playerMovement = player->getComponent<GridMovement>();
         const auto& playerAnimation = player->getComponent<Animation>();
+        const Vector2D playerFacing = facingForClip(playerAnimation.currentClip);
+        if (isInteractionKey(e) && playerMovement.stepDirection == Vector2D(0.0f, 0.0f)) {
+            // We only check interactions when the player is standing on a tile,
+            // so the button talks to the thing in front of them instead of mid-step.
+            if (const InteractionPoint* interaction = InteractionSystem{}.findInteraction(
+                playerCollider.rect,
+                playerFacing,
+                playerMovement.tileSize,
+                world.getMap().interactions
+            )) {
+                SDL_Log("Interaction: %s", interaction->id.c_str());
+            }
+        }
         // The waypoint helper turns a touched doorway or route edge into the
         // next scene request. We read facing from the current animation clip so
         // doorway state does not need its own extra movement field.
         waypointSystem.update(
             playerCollider.rect,
             playerMovement.inputDirection,
-            facingForClip(playerAnimation.currentClip),
+            playerFacing,
             world.getMap().warps,
             pendingSceneChange
         );

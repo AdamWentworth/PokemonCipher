@@ -132,6 +132,7 @@ void Map::load(const char *path, SDL_Texture *ts) {
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
     colliders.clear();
+    interactions.clear();
     spawnPoints.clear();
     warps.clear();
     // TMX object layers are stored in the map's source pixel size, but this
@@ -203,6 +204,9 @@ void Map::load(const char *path, SDL_Texture *ts) {
         // These point markers tell the scene where to place the player after
         // entering from a door, stair, or route change.
         const bool isSpawnLayer = groupName.find("Player Spawn Points") != std::string::npos;
+        // These objects mark tiles the player can interact with from one tile
+        // away, such as signs or scripted map objects we add later.
+        const bool isInteractionLayer = groupName.find("Interaction Layer") != std::string::npos;
         // These rectangles mark the spots that should switch the player into
         // another map when they are touched.
         const bool isWarpLayer = groupName.find("Warp Layer") != std::string::npos;
@@ -233,6 +237,34 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 spawn.position.x = obj->FloatAttribute("x") * objectScaleX;
                 spawn.position.y = obj->FloatAttribute("y") * objectScaleY;
                 spawnPoints.push_back(spawn);
+            }
+        } else if (isInteractionLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                InteractionPoint interaction;
+                const char* interactionId = getObjectPropertyValue(obj, "interaction_id");
+                if (!interactionId) {
+                    // Script ids are already a common map property in this repo,
+                    // so reading them here keeps this first interaction pass reusable.
+                    interactionId = getObjectPropertyValue(obj, "script_id");
+                }
+                if (!interactionId) {
+                    interactionId = obj->Attribute("name");
+                }
+                if (!interactionId) continue;
+
+                interaction.id = interactionId;
+                interaction.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                interaction.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                // Point objects are easier to place in Tiled, so we treat a
+                // zero-size object as one interactable tile.
+                const float objectWidth = obj->FloatAttribute("width");
+                const float objectHeight = obj->FloatAttribute("height");
+                interaction.rect.w = objectWidth > 0.0f ? objectWidth * objectScaleX : kRenderedTileSize;
+                interaction.rect.h = objectHeight > 0.0f ? objectHeight * objectScaleY : kRenderedTileSize;
+                interactions.push_back(interaction);
             }
         } else if (isWarpLayer) {
             for (auto* obj = objectGroup->FirstChildElement("object");

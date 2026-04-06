@@ -3,6 +3,7 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include "ecs/Component.h"
+#include "ecs/systems/InteractionSystem.h"
 #include "ecs/systems/WaypointSystem.h"
 
 class Map {
@@ -23,6 +24,9 @@ public:
     // own buffer or it would be discarded during load.
     std::vector<std::vector<int>> coverTileData;
     std::vector<Collider> colliders;
+    // TMX interaction spots mark things the player can use or inspect from
+    // one tile away without hard-coding those locations in C++.
+    std::vector<InteractionPoint> interactions;
     // TMX spawn points let maps choose where a doorway or route exit should
     // place the player after a scene change.
     std::vector<SpawnPoint> spawnPoints;

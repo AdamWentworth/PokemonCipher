@@ -1,5 +1,4 @@
-#ifndef ASSIGNMENT2_GAMEOBJECT_H
-#define ASSIGNMENT2_GAMEOBJECT_H
+#pragma once
 
 #include "Game.h"
 
@@ -19,4 +18,3 @@ private:
     SDL_FRect srcRect{}, dstRect{};
 };
 
-#endif //ASSIGNMENT2_GAMEOBJECT_H

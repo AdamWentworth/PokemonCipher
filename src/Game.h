@@ -1,6 +1,5 @@
 #pragma once
 #include <SDL3/SDL.h>
-#include <functional>
 #include <random>
 #include <string>
 
@@ -30,7 +29,6 @@ public:
     SDL_Renderer* renderer = nullptr;
 
     SceneManager sceneManager;
-    static std::function<void(std::string)> onSceneChangeRequest;
 
     void randomizeColor();
 

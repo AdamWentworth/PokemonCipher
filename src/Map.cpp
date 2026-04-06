@@ -114,7 +114,6 @@ void Map::load(const char *path, SDL_Texture *ts) {
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
     colliders.clear();
-    itemSpawnPoints.clear();
     // TMX object layers are stored in the map's source pixel size, but this
     // project draws every tile at 32x32. We scale object data during load so
     // collisions and point markers line up with the rendered world.
@@ -178,10 +177,9 @@ void Map::load(const char *path, SDL_Texture *ts) {
         const char* layerName = objectGroup->Attribute("name");
         if (!layerName) continue;
         const std::string groupName(layerName);
-        // Use substring checks so variants like
-        // "Item Spawn Points" and "Item Layer" both match.
+        // Collision is the only object-group gameplay data we still use here,
+        // since pickup objects were removed from the map code.
         const bool isCollisionLayer = groupName.find("Collision") != std::string::npos;
-        const bool isItemLayer = groupName.find("Item") != std::string::npos;
 
         // Collision layers contribute rectangle colliders.
         if (isCollisionLayer) {
@@ -197,22 +195,6 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 c.rect.w = obj->FloatAttribute("width") * objectScaleX;
                 c.rect.h = obj->FloatAttribute("height") * objectScaleY;
                 colliders.push_back(c);
-            }
-        }
-
-        // Item layers contribute point spawn positions.
-        if (isItemLayer) {
-            for (auto* obj = objectGroup->FirstChildElement("object");
-                obj != nullptr;
-                obj = obj->NextSiblingElement("object")) {
-
-                if (!obj->FirstChildElement("point")) continue;
-                // Scale point layers for the same reason as walls so spawn/use
-                // markers stay aligned after the map is drawn larger than the TMX source.
-                itemSpawnPoints.push_back(Vector2D(
-                    obj->FloatAttribute("x") * objectScaleX,
-                    obj->FloatAttribute("y") * objectScaleY
-                ));
             }
         }
     }

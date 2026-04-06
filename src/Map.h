@@ -1,5 +1,4 @@
-#ifndef ASSIGNMENT2_MAP_H
-#define ASSIGNMENT2_MAP_H
+#pragma once
 
 #include <vector>
 #include <SDL3/SDL.h>
@@ -23,7 +22,4 @@ public:
     // own buffer or it would be discarded during load.
     std::vector<std::vector<int>> coverTileData;
     std::vector<Collider> colliders;
-    std::vector<Vector2D> itemSpawnPoints;
 };
-
-#endif //ASSIGNMENT2_MAP_H

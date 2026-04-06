@@ -55,8 +55,4 @@ struct Camera {
     float worldHeight;
 };
 
-struct SceneState {
-    int coinsCollected = 0;
-};
-
 struct PlayerTag{};

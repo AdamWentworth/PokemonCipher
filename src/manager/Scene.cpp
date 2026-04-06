@@ -16,23 +16,6 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
         c.rect.h = collider.rect.h;
     }
 
-    // add entities
-    // load once and reuse for every coin
-    SDL_Texture* itemTex = TextureManager::load("assets/coin.png");
-    SDL_FRect itemSrc{ 0.0f, 0.0f, 32.0f, 32.0f };
-    // spawn coins from the map point layer
-    for (const auto& spawnPoint : world.getMap().itemSpawnPoints) {
-        Entity& item = world.createEntity();
-        auto& itemTransform = item.addComponent<Transform>(Vector2D(spawnPoint.x, spawnPoint.y), 0.0f, 1.0f);
-        SDL_FRect itemDest{ itemTransform.position.x, itemTransform.position.y, 32.0f, 32.0f };
-
-        item.addComponent<Sprite>(itemTex, itemSrc, itemDest);
-
-        auto& itemCollider = item.addComponent<Collider>("item");
-        itemCollider.rect.w = itemDest.w;
-        itemCollider.rect.h = itemDest.h;
-    }
-
     auto& cam = world.createEntity();
     SDL_FRect camView{};
     camView.w = static_cast<float>(windowWidth);
@@ -76,7 +59,4 @@ Scene::Scene(const char* sceneName, const char* mapPath, const int windowWidth, 
     playerCollider.rect.h = playerFootprint;
 
     player.addComponent<PlayerTag>();
-
-    auto &state (world.createEntity());
-    state.addComponent<SceneState>();
 }

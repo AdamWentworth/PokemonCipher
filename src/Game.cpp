@@ -12,8 +12,6 @@
 
 Map* map = nullptr;
 
-std::function<void(std::string)> Game::onSceneChangeRequest;
-
 // constructor
 Game::Game() {}
 
@@ -27,6 +25,12 @@ void Game::init(const char* title, int width, int height, bool fullscreen) {
 
     // For random
     srand(static_cast<unsigned>(time(nullptr)));
+
+    // Draw the game into a view that is half the size of the real window, then
+    // let SDL scale it back up. This makes the camera feel more zoomed in
+    // while still filling the whole game window cleanly.
+    const int gameViewWidth = width / 2;
+    const int gameViewHeight = height / 2;
 
     int flags = 0;
     if (fullscreen) {
@@ -61,6 +65,16 @@ void Game::init(const char* title, int width, int height, bool fullscreen) {
             return;
         }
 
+        // Tell SDL to draw into that smaller view and scale it up to the real
+        // window. Because this view is exactly half the window size, it fills
+        // the screen neatly while showing less of the map at once.
+        if (!SDL_SetRenderLogicalPresentation(renderer, gameViewWidth, gameViewHeight, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)) {
+            std::cout << "Failed to set game view..." << std::endl;
+            std::cout << "SDL error: " << SDL_GetError() << std::endl;
+            isRunning = false;
+            return;
+        }
+
         isRunning = true;
     } else {
         std::cout << "SDL video init failed: " << SDL_GetError() << std::endl;
@@ -70,27 +84,11 @@ void Game::init(const char* title, int width, int height, bool fullscreen) {
 
     AssetManager::loadAnimation("player", "assets/animations/wes_overworld.xml");
 
-    sceneManager.load("level1", "assets/maps/pallet_town/pallet_town_map.tmx", width, height);
-    sceneManager.load("level2", "assets/map2.tmx", width, height);
-
-    sceneManager.changeSceneDeferred("level1");
-
-    onSceneChangeRequest = [this](std::string sceneName) {
-        if (sceneManager.currentScene->getName() == "level2" && sceneName == "level2") {
-            std::cout << "You win!" << std::endl;
-            isRunning = false;
-            return;
-        }
-        if (sceneName == "gameover") {
-            std::cout << "Game over!" << std::endl;
-            isRunning = false;
-            return;
-        }
-
-        sceneManager.changeSceneDeferred(sceneName);
-    };
-
-
+    // We only load the starting map here now. The scene manager still stays in
+    // place so future map exits can switch scenes, but the game no longer has
+    // a built-in "level 1 goes to level 2" flow.
+    sceneManager.load("pallet_town", "assets/maps/pallet_town/pallet_town_map.tmx", gameViewWidth, gameViewHeight);
+    sceneManager.changeSceneDeferred("pallet_town");
 }
 
 void Game::handleEvents() {

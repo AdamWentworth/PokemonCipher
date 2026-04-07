@@ -52,6 +52,18 @@ bool isInteractionKey(const SDL_Event& event) {
         event.key.key == SDLK_Z;
 }
 
+// These keys match the usual menu button idea, and checking only key-down
+// events keeps the menu from flickering open and shut while a key is held.
+bool isStartMenuKey(const SDL_Event& event) {
+    if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
+        return false;
+    }
+
+    return event.key.key == SDLK_ESCAPE ||
+        event.key.key == SDLK_TAB ||
+        event.key.key == SDLK_RETURN;
+}
+
 void createOakVisual(World& world, const InteractionPoint& interaction) {
     Entity& oak = world.createEntity();
     oak.addComponent<Transform>(Vector2D(interaction.rect.x, interaction.rect.y), 0.0f, 1.0f);
@@ -73,11 +85,17 @@ void createOakVisual(World& world, const InteractionPoint& interaction) {
     SDL_FRect dst{interaction.rect.x, interaction.rect.y, src.w * 2.0f, src.h * 2.0f};
     auto& sprite = oak.addComponent<Sprite>(TextureManager::load("assets/characters/oak/oak_overworld.png"), src, dst);
     sprite.offset = Vector2D((interaction.rect.w - dst.w) * 0.5f, -(dst.h - interaction.rect.h));
+
+    auto& collider = oak.addComponent<Collider>("wall");
+    // Oak should block the same tile he stands on, so using a wall collider
+    // lets the existing movement check stop the player without new NPC rules.
+    collider.rect = interaction.rect;
 }
 }
 
 Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath, const int windowWidth, const int windowHeight, const SceneSpawnRequest& spawnRequest) : name(sceneName) {
     dialogueSystem.setViewportSize(windowWidth, windowHeight);
+    startMenuSystem.setViewportSize(windowWidth, windowHeight);
 
     // Load a map
     // Each scene can point at a different tileset image, so we pass that in
@@ -158,6 +176,17 @@ Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath
 }
 
 void Scene::update(const float dt, SDL_Event &e) {
+    if (startMenuSystem.isOpen()) {
+        // While the start menu is open, it owns the controls so the player
+        // cannot keep walking around underneath the menu overlay.
+        if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
+            if (const char* selectedEntry = startMenuSystem.handleKey(e.key.key)) {
+                dialogueSystem.openMessage("START MENU", std::string(selectedEntry) + " is not ready yet.");
+            }
+        }
+        return;
+    }
+
     if (dialogueSystem.isOpen()) {
         // While a dialogue box is open, the same confirm key simply closes it
         // so the player cannot keep moving around underneath the text.
@@ -170,6 +199,17 @@ void Scene::update(const float dt, SDL_Event &e) {
     Entity* playerBeforeUpdate = findPlayer(world);
     Vector2D previousStepDirection{};
     if (playerBeforeUpdate) {
+        // The menu opens most cleanly between tile steps, so we only allow it
+        // while the player is standing still on a tile.
+        auto& playerMovement = playerBeforeUpdate->getComponent<GridMovement>();
+        if (isStartMenuKey(e) && playerMovement.stepDirection == Vector2D(0.0f, 0.0f)) {
+            // Opening the menu pauses overworld updates, so we clear held move
+            // input here to stop the player from drifting when it closes.
+            playerMovement.inputDirection = Vector2D(0.0f, 0.0f);
+            startMenuSystem.openMenu();
+            return;
+        }
+
         previousStepDirection = playerBeforeUpdate->getComponent<GridMovement>().stepDirection;
     }
 
@@ -232,6 +272,7 @@ void Scene::update(const float dt, SDL_Event &e) {
 
 void Scene::render() {
     world.render();
+    startMenuSystem.render(game ? game->renderer : nullptr);
     dialogueSystem.render(game ? game->renderer : nullptr);
 }
 

@@ -45,6 +45,13 @@ SDL_Texture* TextureManager::load(const char* path)
         return nullptr;
     }
 
+    // fixes tile seams by forcing pixel art to scale with nearest
+    // sampling, which stops SDL from blending colors from neighboring tiles.
+    if (!SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST)) {
+        std::cout << "Failed to set nearest scale mode for: " << fullPath.string() << "\n";
+        std::cout << "SDL error: " << SDL_GetError() << "\n";
+    }
+
     // store new texture in the cache
     textures[path] = texture;
 

@@ -204,9 +204,11 @@ void Map::load(const char *path, SDL_Texture *ts) {
         // These point markers tell the scene where to place the player after
         // entering from a door, stair, or route change.
         const bool isSpawnLayer = groupName.find("Player Spawn Points") != std::string::npos;
-        // These objects mark tiles the player can interact with from one tile
-        // away, such as signs or scripted map objects we add later.
-        const bool isInteractionLayer = groupName.find("Interaction Layer") != std::string::npos;
+        // This first dialogue pass uses both a general interaction layer and
+        // the existing NPC layer, so Oak can work before a fuller NPC system exists.
+        const bool isInteractionLayer =
+            groupName.find("Interaction Layer") != std::string::npos ||
+            groupName.find("NPC Layer") != std::string::npos;
         // These rectangles mark the spots that should switch the player into
         // another map when they are touched.
         const bool isWarpLayer = groupName.find("Warp Layer") != std::string::npos;

@@ -1,11 +1,17 @@
 #include "Scene.h"
+#include "../Game.h"
 #include "../TextureManager.h"
 #include "AssetManager.h"
 #include "../ecs/systems/InteractionSystem.h"
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_log.h>
 
+extern Game* game;
+
 namespace {
+constexpr const char* kOakInteractionId = "oak_lab_eevee";
+constexpr const char* kOakAnimationId = "oak_npc";
+
 Entity* findPlayer(World& world) {
     for (auto& entity : world.getEntities()) {
         if (entity && entity->hasComponent<PlayerTag>() && entity->hasComponent<Collider>()) {
@@ -44,9 +50,33 @@ bool isInteractionKey(const SDL_Event& event) {
         event.key.key == SDLK_SPACE ||
         event.key.key == SDLK_Z;
 }
+
+void createOakVisual(World& world, const InteractionPoint& interaction) {
+    Entity& oak = world.createEntity();
+    oak.addComponent<Transform>(Vector2D(interaction.rect.x, interaction.rect.y), 0.0f, 1.0f);
+
+    // Oak only needs one idle pose for this first dialogue pass, so we can
+    // build him from a fixed asset pair instead of making interactions carry
+    // around full sprite setup data.
+    AssetManager::loadAnimation(kOakAnimationId, "assets/animations/red_overworld.xml");
+    Animation anim = AssetManager::getAnimation(kOakAnimationId);
+    anim.currentClip = "idle_down";
+    oak.addComponent<Animation>(anim);
+
+    SDL_FRect src{0.0f, 0.0f, 16.0f, 32.0f};
+    auto clipIt = anim.clips.find(anim.currentClip);
+    if (clipIt != anim.clips.end() && !clipIt->second.frameIndices.empty()) {
+        src = clipIt->second.frameIndices[0];
+    }
+
+    SDL_FRect dst{interaction.rect.x, interaction.rect.y, src.w * 2.0f, src.h * 2.0f};
+    auto& sprite = oak.addComponent<Sprite>(TextureManager::load("assets/characters/oak/oak_overworld.png"), src, dst);
+    sprite.offset = Vector2D((interaction.rect.w - dst.w) * 0.5f, -(dst.h - interaction.rect.h));
+}
 }
 
 Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath, const int windowWidth, const int windowHeight, const SceneSpawnRequest& spawnRequest) : name(sceneName) {
+    dialogueSystem.setViewportSize(windowWidth, windowHeight);
 
     // Load a map
     // Each scene can point at a different tileset image, so we pass that in
@@ -60,6 +90,12 @@ Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath
         c.rect.y = collider.rect.y;
         c.rect.w = collider.rect.w;
         c.rect.h = collider.rect.h;
+    }
+
+    for (const auto& interaction : world.getMap().interactions) {
+        if (interaction.id == kOakInteractionId) {
+            createOakVisual(world, interaction);
+        }
     }
 
     auto& cam = world.createEntity();
@@ -121,6 +157,15 @@ Scene::Scene(const char* sceneName, const char* mapPath, const char* tilesetPath
 }
 
 void Scene::update(const float dt, SDL_Event &e) {
+    if (dialogueSystem.isOpen()) {
+        // While a dialogue box is open, the same confirm key simply closes it
+        // so the player cannot keep moving around underneath the text.
+        if (isInteractionKey(e)) {
+            dialogueSystem.close();
+        }
+        return;
+    }
+
     world.update(dt, e);
 
     if (Entity* player = findPlayer(world)) {
@@ -137,7 +182,9 @@ void Scene::update(const float dt, SDL_Event &e) {
                 playerMovement.tileSize,
                 world.getMap().interactions
             )) {
-                SDL_Log("Interaction: %s", interaction->id.c_str());
+                if (!dialogueSystem.openForInteraction(*interaction)) {
+                    SDL_Log("Interaction: %s", interaction->id.c_str());
+                }
             }
         }
         // The waypoint helper turns a touched doorway or route edge into the
@@ -151,6 +198,11 @@ void Scene::update(const float dt, SDL_Event &e) {
             pendingSceneChange
         );
     }
+}
+
+void Scene::render() {
+    world.render();
+    dialogueSystem.render(game ? game->renderer : nullptr);
 }
 
 bool Scene::takePendingSceneChange(SceneChangeRequest& request) {

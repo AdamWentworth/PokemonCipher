@@ -17,6 +17,7 @@ add_executable(PokemonCipher
   src/TextureManager.cpp
   src/manager/AssetManager.cpp
   src/manager/Scene.cpp
+  src/manager/SceneSetup.cpp
 
   src/utils/Vector2D.cpp
   src/utils/Collision.cpp

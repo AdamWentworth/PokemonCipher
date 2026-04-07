@@ -3,6 +3,7 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include "ecs/Component.h"
+#include "ecs/systems/EncounterSystem.h"
 #include "ecs/systems/InteractionSystem.h"
 #include "ecs/systems/WaypointSystem.h"
 
@@ -24,6 +25,9 @@ public:
     // own buffer or it would be discarded during load.
     std::vector<std::vector<int>> coverTileData;
     std::vector<Collider> colliders;
+    // TMX encounter zones mark the grass tiles that can surprise the player
+    // with a wild encounter after they finish stepping onto them.
+    std::vector<EncounterZone> encounterZones;
     // TMX interaction spots mark things the player can use or inspect from
     // one tile away without hard-coding those locations in C++.
     std::vector<InteractionPoint> interactions;

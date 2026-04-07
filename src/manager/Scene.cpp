@@ -2,6 +2,7 @@
 #include "../Game.h"
 #include "../TextureManager.h"
 #include "AssetManager.h"
+#include "../ecs/systems/EncounterSystem.h"
 #include "../ecs/systems/InteractionSystem.h"
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_log.h>
@@ -166,13 +167,39 @@ void Scene::update(const float dt, SDL_Event &e) {
         return;
     }
 
+    Entity* playerBeforeUpdate = findPlayer(world);
+    Vector2D previousStepDirection{};
+    if (playerBeforeUpdate) {
+        previousStepDirection = playerBeforeUpdate->getComponent<GridMovement>().stepDirection;
+    }
+
     world.update(dt, e);
 
     if (Entity* player = findPlayer(world)) {
         const auto& playerCollider = player->getComponent<Collider>();
-        const auto& playerMovement = player->getComponent<GridMovement>();
+        auto& playerMovement = player->getComponent<GridMovement>();
         const auto& playerAnimation = player->getComponent<Animation>();
         const Vector2D playerFacing = facingForClip(playerAnimation.currentClip);
+        const bool justFinishedStep =
+            !(previousStepDirection == Vector2D(0.0f, 0.0f)) &&
+            playerMovement.stepDirection == Vector2D(0.0f, 0.0f);
+
+        if (justFinishedStep) {
+            // Grass should only roll once the player has fully landed on that
+            // tile, not while they are still sliding into it mid-step.
+            if (const char* encounterText = EncounterSystem{}.tryStartEncounter(
+                playerCollider.rect,
+                world.getMap().encounterZones
+            )) {
+                // The encounter box pauses overworld updates, so we clear the
+                // last move input here to stop the player from resuming that
+                // old direction when the box closes.
+                playerMovement.inputDirection = Vector2D(0.0f, 0.0f);
+                dialogueSystem.openMessage("WILD ENCOUNTER", encounterText);
+                return;
+            }
+        }
+
         if (isInteractionKey(e) && playerMovement.stepDirection == Vector2D(0.0f, 0.0f)) {
             // We only check interactions when the player is standing on a tile,
             // so the button talks to the thing in front of them instead of mid-step.
@@ -182,6 +209,9 @@ void Scene::update(const float dt, SDL_Event &e) {
                 playerMovement.tileSize,
                 world.getMap().interactions
             )) {
+                // Dialogue uses the same pause flow as encounters, so we clear
+                // the held move here for the same reason before opening text.
+                playerMovement.inputDirection = Vector2D(0.0f, 0.0f);
                 if (!dialogueSystem.openForInteraction(*interaction)) {
                     SDL_Log("Interaction: %s", interaction->id.c_str());
                 }

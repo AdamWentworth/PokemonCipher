@@ -132,6 +132,7 @@ void Map::load(const char *path, SDL_Texture *ts) {
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
     colliders.clear();
+    encounterZones.clear();
     interactions.clear();
     spawnPoints.clear();
     warps.clear();
@@ -209,6 +210,9 @@ void Map::load(const char *path, SDL_Texture *ts) {
         const bool isInteractionLayer =
             groupName.find("Interaction Layer") != std::string::npos ||
             groupName.find("NPC Layer") != std::string::npos;
+        // Grass encounter rectangles stay in the map data so each route can
+        // decide where wild encounters are possible without C++ hard-coding.
+        const bool isEncounterLayer = groupName.find("Encounter Layer") != std::string::npos;
         // These rectangles mark the spots that should switch the player into
         // another map when they are touched.
         const bool isWarpLayer = groupName.find("Warp Layer") != std::string::npos;
@@ -267,6 +271,24 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 interaction.rect.w = objectWidth > 0.0f ? objectWidth * objectScaleX : kRenderedTileSize;
                 interaction.rect.h = objectHeight > 0.0f ? objectHeight * objectScaleY : kRenderedTileSize;
                 interactions.push_back(interaction);
+            }
+        } else if (isEncounterLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                const char* encounterTable = getObjectPropertyValue(obj, "encounter_table");
+                if (!encounterTable) continue;
+
+                EncounterZone encounterZone;
+                encounterZone.tableId = encounterTable;
+                // Scale grass rectangles into the same world size as the map
+                // so stepping onto visible grass checks the right tile.
+                encounterZone.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                encounterZone.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                encounterZone.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                encounterZone.rect.h = obj->FloatAttribute("height") * objectScaleY;
+                encounterZones.push_back(encounterZone);
             }
         } else if (isWarpLayer) {
             for (auto* obj = objectGroup->FirstChildElement("object");

@@ -22,13 +22,19 @@ public:
         text.clear();
     }
 
+    // A shared open helper keeps Oak dialogue and encounter popups using the
+    // same box instead of growing separate UI code for each message type.
+    void openMessage(const std::string& newSpeaker, const std::string& newText) {
+        open = true;
+        speaker = newSpeaker;
+        text = newText;
+    }
+
     // This first pass only needs enough data to prove the interaction-to-text
     // flow, so we open a line for Oak and leave other ids as future work.
     bool openForInteraction(const InteractionPoint& interaction) {
         if (interaction.id == "oak_lab_eevee") {
-            open = true;
-            speaker = "PROF. OAK";
-            text = "That EEVEE is one of a kind.";
+            openMessage("PROF. OAK", "That EEVEE is one of a kind.");
             return true;
         }
 

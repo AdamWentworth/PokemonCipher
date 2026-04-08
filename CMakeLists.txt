@@ -13,6 +13,7 @@ add_executable(PokemonCipher
   src/main.cpp
   src/Game.cpp
   src/Map.cpp
+  src/MapLoader.cpp
   src/GameObject.cpp
   src/TextureManager.cpp
   src/manager/AssetManager.cpp

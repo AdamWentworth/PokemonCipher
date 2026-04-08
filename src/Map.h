@@ -20,6 +20,12 @@ public:
     
     SDL_Texture *tileset = nullptr;
     int width{}, height{};
+    // The loader keeps tileset metadata on the map itself now, so drawing no
+    // longer depends on file-global values hiding outside the map instance.
+    int firstGid = 1;
+    int sourceTileW = 32;
+    int sourceTileH = 32;
+    int tilesetColumns = 1;
     std::vector<std::vector<int>> tileData;
     // The old loader kept only one tile layer, so TMX cover data needed its
     // own buffer or it would be discarded during load.

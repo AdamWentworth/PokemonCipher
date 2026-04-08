@@ -1,0 +1,251 @@
+#include "MapLoader.h"
+
+#include <sstream>
+#include <string>
+
+#include <tinyxml2.h>
+
+namespace {
+// Map rendering and TMX object placement both assume 32x32 gameplay tiles, so
+// the loader uses the same size when it scales map data into world space.
+constexpr float kRenderedTileSize = 32.0f;
+
+// Both terrain and cover layers use the same TMX CSV format, so a shared
+// parser keeps the two passes consistent and avoids duplicating load logic.
+void parseLayerData(tinyxml2::XMLElement* layer, const int width, const int height, std::vector<std::vector<int>>& target) {
+    target = std::vector(height, std::vector<int>(width, 0));
+
+    if (!layer) return;
+
+    auto* data = layer->FirstChildElement("data");
+    if (!data || !data->GetText()) return;
+
+    std::stringstream ss(data->GetText());
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            std::string val;
+            if (!std::getline(ss, val, ',')) return;
+            target[row][col] = std::stoi(val);
+        }
+    }
+}
+
+// Warp and spawn data live inside <properties>, so this helper keeps that
+// lookup in one place instead of repeating the same XML walk for every object.
+const char* getObjectPropertyValue(tinyxml2::XMLElement* object, const char* propertyName) {
+    auto* properties = object->FirstChildElement("properties");
+    if (!properties) return nullptr;
+
+    for (auto* property = properties->FirstChildElement("property");
+        property != nullptr;
+        property = property->NextSiblingElement("property")) {
+        const char* name = property->Attribute("name");
+        if (name && std::string(name) == propertyName) {
+            return property->Attribute("value");
+        }
+    }
+
+    return nullptr;
+}
+}
+
+namespace MapLoader {
+void loadInto(Map& map, const char* path, SDL_Texture* tileset) {
+    map.tileset = tileset;
+    tinyxml2::XMLDocument doc;
+    doc.LoadFile(path);
+
+    auto* mapNode = doc.FirstChildElement("map");
+    map.width = mapNode->IntAttribute("width");
+    map.height = mapNode->IntAttribute("height");
+    map.colliders.clear();
+    map.encounterZones.clear();
+    map.interactions.clear();
+    map.spawnPoints.clear();
+    map.warps.clear();
+    // TMX object layers are stored in the map's source pixel size, but this
+    // project draws every tile at 32x32. We scale object data during load so
+    // collisions and point markers line up with the rendered world.
+    const int mapTileW = mapNode->IntAttribute("tilewidth", 16);
+    const int mapTileH = mapNode->IntAttribute("tileheight", 16);
+    const float objectScaleX = kRenderedTileSize / static_cast<float>(mapTileW);
+    const float objectScaleY = kRenderedTileSize / static_cast<float>(mapTileH);
+
+    // The draw code now reads this metadata from Map itself, so rendering does
+    // not depend on file-global state hiding outside the map instance.
+    if (auto* tilesetNode = mapNode->FirstChildElement("tileset")) {
+        map.firstGid = tilesetNode->IntAttribute("firstgid", 1);
+        map.sourceTileW = tilesetNode->IntAttribute("tilewidth", 32);
+        map.sourceTileH = tilesetNode->IntAttribute("tileheight", 32);
+        map.tilesetColumns = tilesetNode->IntAttribute("columns", 1);
+    }
+
+    // The original loader only kept the first <layer>, which meant TMX cover
+    // tiles were silently ignored. We split them here so both passes survive load.
+    bool terrainLoaded = false;
+    bool coverLoaded = false;
+    for (auto* layer = mapNode->FirstChildElement("layer");
+        layer != nullptr;
+        layer = layer->NextSiblingElement("layer")) {
+
+        const char* layerName = layer->Attribute("name");
+        const bool isCoverLayer = layerName && std::string(layerName).find("Cover") != std::string::npos;
+
+        if (isCoverLayer && !coverLoaded) {
+            parseLayerData(layer, map.width, map.height, map.coverTileData);
+            coverLoaded = true;
+        } else if (!isCoverLayer && !terrainLoaded) {
+            parseLayerData(layer, map.width, map.height, map.tileData);
+            terrainLoaded = true;
+        }
+    }
+
+    if (!terrainLoaded) {
+        map.tileData = std::vector(map.height, std::vector<int>(map.width, 0));
+    }
+    if (!coverLoaded) {
+        // Keeping an empty cover buffer lets the renderer call drawCover()
+        // unconditionally, so maps without a cover layer do not need a special case.
+        map.coverTileData = std::vector(map.height, std::vector<int>(map.width, 0));
+    }
+
+    // Parse object groups by their "name" value, not by XML order.
+    // This keeps loading stable even if groups are reordered or extra groups are added.
+    for (auto* objectGroup = mapNode->FirstChildElement("objectgroup");
+        objectGroup != nullptr;
+        objectGroup = objectGroup->NextSiblingElement("objectgroup")) {
+        const char* layerName = objectGroup->Attribute("name");
+        if (!layerName) continue;
+        const std::string groupName(layerName);
+        // Collision is the only object-group gameplay data we still use here,
+        // since pickup objects were removed from the map code.
+        const bool isCollisionLayer = groupName.find("Collision") != std::string::npos;
+        // These point markers tell the scene where to place the player after
+        // entering from a door, stair, or route change.
+        const bool isSpawnLayer = groupName.find("Player Spawn Points") != std::string::npos;
+        // This first dialogue pass uses both a general interaction layer and
+        // the existing NPC layer, so Oak can work before a fuller NPC system exists.
+        const bool isInteractionLayer =
+            groupName.find("Interaction Layer") != std::string::npos ||
+            groupName.find("NPC Layer") != std::string::npos;
+        // Grass encounter rectangles stay in the map data so each route can
+        // decide where wild encounters are possible without C++ hard-coding.
+        const bool isEncounterLayer = groupName.find("Encounter Layer") != std::string::npos;
+        // These rectangles mark the spots that should switch the player into
+        // another map when they are touched.
+        const bool isWarpLayer = groupName.find("Warp Layer") != std::string::npos;
+
+        // Collision layers contribute rectangle colliders.
+        if (isCollisionLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                Collider c;
+                // Scale each wall rectangle into the same 32x32 world space as the
+                // visible tiles, otherwise the player collides with a half-size map.
+                c.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                c.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                c.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                c.rect.h = obj->FloatAttribute("height") * objectScaleY;
+                map.colliders.push_back(c);
+            }
+        } else if (isSpawnLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                SpawnPoint spawn;
+                const char* spawnName = obj->Attribute("name");
+                spawn.id = spawnName ? spawnName : "default";
+                spawn.position.x = obj->FloatAttribute("x") * objectScaleX;
+                spawn.position.y = obj->FloatAttribute("y") * objectScaleY;
+                map.spawnPoints.push_back(spawn);
+            }
+        } else if (isInteractionLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                InteractionPoint interaction;
+                const char* interactionId = getObjectPropertyValue(obj, "interaction_id");
+                if (!interactionId) {
+                    // Script ids are already a common map property in this repo,
+                    // so reading them here keeps this first interaction pass reusable.
+                    interactionId = getObjectPropertyValue(obj, "script_id");
+                }
+                if (!interactionId) {
+                    interactionId = obj->Attribute("name");
+                }
+                if (!interactionId) continue;
+
+                interaction.id = interactionId;
+                interaction.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                interaction.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                // Point objects are easier to place in Tiled, so we treat a
+                // zero-size object as one interactable tile.
+                const float objectWidth = obj->FloatAttribute("width");
+                const float objectHeight = obj->FloatAttribute("height");
+                interaction.rect.w = objectWidth > 0.0f ? objectWidth * objectScaleX : kRenderedTileSize;
+                interaction.rect.h = objectHeight > 0.0f ? objectHeight * objectScaleY : kRenderedTileSize;
+                map.interactions.push_back(interaction);
+            }
+        } else if (isEncounterLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                const char* encounterTable = getObjectPropertyValue(obj, "encounter_table");
+                if (!encounterTable) continue;
+
+                EncounterZone encounterZone;
+                encounterZone.tableId = encounterTable;
+                // Scale grass rectangles into the same world size as the map
+                // so stepping onto visible grass checks the right tile.
+                encounterZone.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                encounterZone.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                encounterZone.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                encounterZone.rect.h = obj->FloatAttribute("height") * objectScaleY;
+                map.encounterZones.push_back(encounterZone);
+            }
+        } else if (isWarpLayer) {
+            for (auto* obj = objectGroup->FirstChildElement("object");
+                obj != nullptr;
+                obj = obj->NextSiblingElement("object")) {
+
+                WarpPoint warp;
+                warp.rect.x = obj->FloatAttribute("x") * objectScaleX;
+                warp.rect.y = obj->FloatAttribute("y") * objectScaleY;
+                warp.rect.w = obj->FloatAttribute("width") * objectScaleX;
+                warp.rect.h = obj->FloatAttribute("height") * objectScaleY;
+
+                if (const char* targetMap = getObjectPropertyValue(obj, "target_map")) {
+                    warp.targetMap = targetMap;
+                }
+                if (const char* targetSpawnId = getObjectPropertyValue(obj, "target_spawn_id")) {
+                    warp.targetSpawnId = targetSpawnId;
+                }
+                if (const char* requiredDirection = getObjectPropertyValue(obj, "required_direction")) {
+                    // Some door and stair warps should only fire when the player
+                    // steps into that tile from the matching side.
+                    warp.requiredDirection = requiredDirection;
+                }
+
+                const char* targetSpawnX = getObjectPropertyValue(obj, "target_spawn_x");
+                const char* targetSpawnY = getObjectPropertyValue(obj, "target_spawn_y");
+                if (targetSpawnX && targetSpawnY) {
+                    // Some map exits land on a fixed spot instead of a named
+                    // spawn point, so this simple version supports both.
+                    warp.targetPosition.x = std::stof(targetSpawnX) * objectScaleX;
+                    warp.targetPosition.y = std::stof(targetSpawnY) * objectScaleY;
+                    warp.hasTargetPosition = true;
+                }
+
+                if (!warp.targetMap.empty()) {
+                    map.warps.push_back(warp);
+                }
+            }
+        }
+    }
+}
+}

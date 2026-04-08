@@ -18,6 +18,7 @@ add_executable(PokemonCipher
   src/manager/AssetManager.cpp
   src/manager/Scene.cpp
   src/manager/SceneEntityFactory.cpp
+  src/manager/SceneRuntimeHelpers.cpp
   src/manager/SceneSetup.cpp
 
   src/utils/Vector2D.cpp

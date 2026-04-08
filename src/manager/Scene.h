@@ -34,5 +34,4 @@ class Scene {
     // The waypoint helper owns the simple spawn and warp rules so Scene can
     // stay focused on assembling the map and entities.
     WaypointSystem waypointSystem;
-    void createProjectile(Vector2D pos, Vector2D dir, int speed);
 };

@@ -1,7 +1,6 @@
 #pragma once
+
 #include <SDL3/SDL.h>
-#include <random>
-#include <string>
 
 #include "manager/SceneManager.h"
 
@@ -30,20 +29,11 @@ public:
 
     SceneManager sceneManager;
 
-    void randomizeColor();
-
 private:
-    int frameCount = 0;
     bool isRunning = false;
 
     SDL_Window* window = nullptr;
     SDL_Event event;
-
-    // SDL stores colour channels as 8-bit
-    // range [0, 255]
-    Uint8 r, g, b, a;
-
-    std::random_device rd; // seed from hardware
-    std::mt19937 gen{rd()};// Mersenne Twister generator
-    std::uniform_int_distribution<int> dist{0, 255};
+    bool initializeRuntime(const char* title, int width, int height, bool fullscreen, int gameViewWidth, int gameViewHeight);
+    void loadGameContent(int gameViewWidth, int gameViewHeight);
 };

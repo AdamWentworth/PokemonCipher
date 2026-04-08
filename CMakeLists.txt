@@ -12,6 +12,8 @@ find_package(tinyxml2 CONFIG REQUIRED)
 add_executable(PokemonCipher
   src/main.cpp
   src/Game.cpp
+  src/GameBootstrap.cpp
+  src/GameContent.cpp
   src/Map.cpp
   src/MapLoader.cpp
   src/TextureManager.cpp

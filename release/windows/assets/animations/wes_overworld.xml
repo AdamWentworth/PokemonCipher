@@ -1,0 +1,38 @@
+<animations>
+    <walk_down>
+        <frame x="93" y="0" w="31" h="45" />
+        <frame x="0" y="0" w="31" h="45" />
+        <frame x="124" y="0" w="31" h="45" />
+        <frame x="0" y="0" w="31" h="45" />
+    </walk_down>
+    <walk_up>
+        <frame x="154" y="0" w="31" h="45" />
+        <frame x="31" y="0" w="31" h="45" />
+        <frame x="185" y="0" w="31" h="45" />
+        <frame x="31" y="0" w="31" h="45" />
+    </walk_up>
+    <walk_left>
+        <frame x="217" y="0" w="31" h="45" />
+        <frame x="62" y="0" w="31" h="45" />
+        <frame x="248" y="0" w="31" h="45" />
+        <frame x="62" y="0" w="31" h="45" />
+    </walk_left>
+    <walk_right>
+        <frame x="310" y="0" w="31" h="45" />
+        <frame x="279" y="0" w="31" h="45" />
+        <frame x="342" y="0" w="31" h="45" />
+        <frame x="279" y="0" w="31" h="45" />
+    </walk_right>
+    <idle_down>
+        <frame x="0" y="0" w="31" h="45" />
+    </idle_down>
+    <idle_up>
+        <frame x="31" y="0" w="31" h="45" />
+    </idle_up>
+    <idle_left>
+        <frame x="62" y="0" w="31" h="45" />
+    </idle_left>
+    <idle_right>
+        <frame x="279" y="0" w="31" h="45" />
+    </idle_right>
+</animations>

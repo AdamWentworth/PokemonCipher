@@ -8,10 +8,11 @@
 #include "utils/Collision.h"
 #include "../Component.h"
 #include "../Entity.h"
+#include "Map.h"
 
 class MovementSystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities, float dt) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities, float dt, const Map& map) {
         for (auto& entity : entities) {
             if (!entity) continue;
 
@@ -42,14 +43,29 @@ public:
                     // see whether the move should be blocked.
                     SDL_FRect candidateRect{candidatePosition.x, candidatePosition.y, collider.rect.w, collider.rect.h};
                     bool blocked = false;
+                    const float worldWidth = static_cast<float>(map.width) * grid.tileSize;
+                    const float worldHeight = static_cast<float>(map.height) * grid.tileSize;
+
+                    // tiny map forgets some edge wall objects, the player
+                    // still cannot step outside the authored map bounds.
+                    if (worldWidth > 0.0f && worldHeight > 0.0f) {
+                        if (candidatePosition.x < 0.0f ||
+                            candidatePosition.y < 0.0f ||
+                            (candidatePosition.x + collider.rect.w) > worldWidth ||
+                            (candidatePosition.y + collider.rect.h) > worldHeight) {
+                            blocked = true;
+                        }
+                    }
 
                     // If that next tile overlaps a wall, do not start the step.
-                    for (const auto& other : entities) {
-                        if (!other || other.get() == entity.get() || !other->hasComponent<Collider>()) continue;
-                        const auto& otherCollider = other->getComponent<Collider>();
-                        if (otherCollider.tag == "wall" && Collision::AABB(candidateRect, otherCollider.rect)) {
-                            blocked = true;
-                            break;
+                    if (!blocked) {
+                        for (const auto& other : entities) {
+                            if (!other || other.get() == entity.get() || !other->hasComponent<Collider>()) continue;
+                            const auto& otherCollider = other->getComponent<Collider>();
+                            if (otherCollider.tag == "wall" && Collision::AABB(candidateRect, otherCollider.rect)) {
+                                blocked = true;
+                                break;
+                            }
                         }
                     }
 

@@ -32,7 +32,9 @@ public:
     World();
     void update(float dt, SDL_Event& event) {
         keyboardInputSystem.update(entities, event);
-        movementSystem.update(entities, dt);
+        // Movement now also checks the map bounds, so rooms do not need wall
+        // objects on every single outer edge just to stop the player.
+        movementSystem.update(entities, dt, map);
         collisionSystem.update(*this);
         animationSystem.update(entities, dt);
         cameraSystem.update(entities);

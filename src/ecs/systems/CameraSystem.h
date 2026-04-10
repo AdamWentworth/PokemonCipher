@@ -26,6 +26,16 @@ class CameraSystem {
             if (e->hasComponent<Camera>()) {
 
                 auto& cam = e->getComponent<Camera>();
+                // A small room can be smaller than the camera view, so clamp
+                // the camera limit to zero instead of letting it go negative.
+                float maxX = cam.worldWidth - cam.view.w;
+                float maxY = cam.worldHeight - cam.view.h;
+                if (maxX < 0.0f) {
+                    maxX = 0.0f;
+                }
+                if (maxY < 0.0f) {
+                    maxY = 0.0f;
+                }
 
                 cam.view.x = playerTransform.position.x - cam.view.w / 2;
                 cam.view.y = playerTransform.position.y - cam.view.h / 2;
@@ -38,11 +48,11 @@ class CameraSystem {
                     cam.view.y = 0;
                 }
 
-                if (cam.view.x > cam.worldWidth - cam.view.w)
-                    cam.view.x = cam.worldWidth - cam.view.w;
+                if (cam.view.x > maxX)
+                    cam.view.x = maxX;
 
-                if (cam.view.y > cam.worldHeight - cam.view.h)
-                    cam.view.y = cam.worldHeight - cam.view.h;
+                if (cam.view.y > maxY)
+                    cam.view.y = maxY;
             }
         }
     }

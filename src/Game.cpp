@@ -54,7 +54,9 @@ void Game::update(float dt) {
 }
 
 void Game::render() {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    // Small rooms can be narrower than the camera view, so black avoids
+    // flashing white in the unused border around the map.
 
     // Every frame the renderer is cleared with the draw color
     SDL_RenderClear(renderer);

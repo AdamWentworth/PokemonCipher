@@ -55,7 +55,7 @@ public:
         box.y = static_cast<float>(viewportHeight) - box.h - kPadding;
 
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        // This matches the darker menu-style panel look from Pokemon2 so the
+        // This matches the darker menu-style panel look
         // dialogue box feels like part of the same Pokemon UI family.
         SDL_SetRenderDrawColor(renderer, 20, 24, 32, 230);
         SDL_RenderFillRect(renderer, &box);

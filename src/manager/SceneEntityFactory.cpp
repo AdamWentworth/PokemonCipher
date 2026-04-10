@@ -5,7 +5,6 @@
 
 namespace {
 constexpr const char* kOakInteractionId = "oak_lab_eevee";
-constexpr const char* kOakAnimationId = "oak_npc";
 
 std::string idleClipForFacing(const Vector2D& facingDirection) {
     if (facingDirection.x > 0.0f) return "idle_right";
@@ -18,20 +17,7 @@ void createOakVisual(World& world, const InteractionPoint& interaction) {
     Entity& oak = world.createEntity();
     oak.addComponent<Transform>(Vector2D(interaction.rect.x, interaction.rect.y), 0.0f, 1.0f);
 
-    // Oak only needs one idle pose for this first dialogue pass, so we can
-    // build him from a fixed asset pair instead of making interactions carry
-    // around full sprite setup data.
-    AssetManager::loadAnimation(kOakAnimationId, "assets/animations/red_overworld.xml");
-    Animation anim = AssetManager::getAnimation(kOakAnimationId);
-    anim.currentClip = "idle_down";
-    oak.addComponent<Animation>(anim);
-
     SDL_FRect src{0.0f, 0.0f, 16.0f, 32.0f};
-    auto clipIt = anim.clips.find(anim.currentClip);
-    if (clipIt != anim.clips.end() && !clipIt->second.frameIndices.empty()) {
-        src = clipIt->second.frameIndices[0];
-    }
-
     SDL_FRect dst{interaction.rect.x, interaction.rect.y, src.w * 2.0f, src.h * 2.0f};
     auto& sprite = oak.addComponent<Sprite>(TextureManager::load("assets/characters/oak/oak_overworld.png"), src, dst);
     sprite.offset = Vector2D((interaction.rect.w - dst.w) * 0.5f, -(dst.h - interaction.rect.h));

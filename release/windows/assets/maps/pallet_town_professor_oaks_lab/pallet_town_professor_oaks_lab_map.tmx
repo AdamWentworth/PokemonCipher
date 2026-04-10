@@ -85,7 +85,6 @@
     <property name="facing" value="down"/>
     <property name="speaker" value="PROF. OAK"/>
     <property name="sprite" value="assets/characters/oak/oak_overworld.png"/>
-    <property name="animation" value="assets/animations/red_overworld.xml"/>
    </properties>
   </object>
  </objectgroup>
